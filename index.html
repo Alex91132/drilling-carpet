@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ковёр бурения — визуализация графика строительства скважин — Александр Федоров</title>
-  <meta name="description" content="Генератор ковра бурения: загрузите Excel со скважинами куста — получите по-дневную диаграмму Ганта строительства всех скважин: монтаж, бурение по колоннам, передвижка, освоение, ввод.">
+  <title>Ковёр бурения — график движения буровых установок — Александр Федоров</title>
+  <meta name="description" content="Загрузите графики бурения одного или нескольких месторождений — страница построит график движения буровых установок по месяцам: кусты, даты, число скважин, ВМР и простой установки.">
 
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Ковёр бурения — генератор графика строительства скважин">
-  <meta property="og:description" content="Загрузите Excel со скважинами — страница сама построит по-дневный ковёр бурения куста: фазы, даты, сутки, сводка.">
+  <meta property="og:title" content="Ковёр бурения — график движения буровых установок">
+  <meta property="og:description" content="Графики бурения нескольких месторождений → движение буровых установок по кустам: даты, скважины, ВМР, простой.">
   <meta property="og:image" content="https://alex91132.github.io/assets/og.png">
   <meta property="og:url" content="https://alex91132.github.io/drilling-carpet/">
   <meta name="twitter:card" content="summary_large_image">
@@ -32,20 +32,26 @@
       --ph-conserv: #64748b;
       --ph-build:   #6b7280;
       --ph-vmr:     #eab308;
+      --ph-idle:    #dc2626;
     }
+    main.container { max-width: 1240px; }
 
     .dropzone {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      background: var(--card);
-      padding: 26px 20px;
-      text-align: center;
-      transition: border-color .15s ease, background .15s ease;
+      border: 2px dashed var(--border); border-radius: 12px; background: var(--card);
+      padding: 22px 20px; text-align: center; transition: border-color .15s ease, background .15s ease;
     }
     .dropzone.drag { border-color: var(--accent); background: var(--bg); }
     .dropzone .big { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
     .dropzone .sub { font-size: 14px; color: var(--muted); }
     .dropzone input[type=file] { display: none; }
+
+    .files { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--card);
+      border-radius: 999px; padding: 3px 6px 3px 12px; font-size: 13.5px; }
+    .chip b { font-weight: 600; }
+    .chip .m { color: var(--muted); }
+    .chip button { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 999px; }
+    .chip button:hover { color: var(--ph-idle); background: var(--bg); }
 
     .toolbar {
       display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end;
@@ -55,8 +61,7 @@
     .toolbar .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
     select {
       background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); padding: 7px 10px; font-size: 15px; font-family: inherit;
-      max-width: 260px;
+      color: var(--text); padding: 7px 10px; font-size: 15px; font-family: inherit; max-width: 320px;
     }
     select:focus, .seg button:focus-visible, .chk input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -65,44 +70,50 @@
     .seg button.on { background: var(--accent); color: #fff; }
     .chk { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text); padding-bottom: 7px; cursor: pointer; }
     .chk input { accent-color: var(--accent); width: 15px; height: 15px; }
+    input[type=range] { accent-color: var(--accent); width: 150px; vertical-align: middle; }
 
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 18px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0; }
     .kcard { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 14px; }
+    .kcard.warn { border-left-color: var(--ph-idle); }
     .kcard .num { font-size: 23px; font-weight: 700; color: var(--accent); line-height: 1.25; }
+    .kcard.warn .num { color: var(--ph-idle); }
     .kcard .lab { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 
+    .warnings { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--ph-idle); border-radius: 10px; padding: 8px 14px; margin: 0 0 14px; font-size: 14px; }
+    .warnings summary { cursor: pointer; font-weight: 600; }
+    .warnings ul { margin: 8px 0 4px; padding-left: 20px; max-height: 220px; overflow: auto; }
+
     .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px 6px; margin: 14px 0; position: relative; overflow-x: auto; }
-    .chart-card svg { display: block; min-width: 760px; user-select: none; }
-    .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 8px; }
-    .legend button {
+    .chart-card > svg { display: block; min-width: 760px; user-select: none; }
+    .gdbu { display: flex; align-items: flex-start; overflow-x: auto; overscroll-behavior-x: contain; border-radius: 8px; }
+    .gdbu svg { display: block; flex: none; user-select: none; }
+    .gdbu .left { position: sticky; left: 0; z-index: 2; background: var(--card); box-shadow: 4px 0 6px -4px rgba(0,0,0,.18); }
+    .gdbu .camp { cursor: pointer; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 8px; align-items: center; }
+    .legend button, .legend span {
       display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--muted);
-      background: transparent; border: none; padding: 2px 0; cursor: pointer; font-family: inherit;
+      background: transparent; border: none; padding: 2px 0; font-family: inherit;
     }
+    .legend button { cursor: pointer; }
     .legend button.off { opacity: .38; text-decoration: line-through; }
-    .legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+    .legend .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
     .legend b { color: var(--text); font-weight: 600; }
 
     .tip {
       position: fixed; z-index: 50; pointer-events: none; display: none;
       background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
       padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--text);
-      box-shadow: 0 4px 18px rgba(0,0,0,.18); max-width: 300px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.18); max-width: 340px;
     }
-    .tip .t { font-weight: 700; margin-bottom: 3px; }
     .tip .m { color: var(--muted); }
 
     .status { font-size: 14px; margin: 10px 0 0; color: var(--muted); }
     .status.err { color: var(--ph-demount); }
-    .pill { display:inline-block; border:1px solid var(--border); border-radius:999px; font-size:11.5px; padding:0 7px; margin-left:5px; color:var(--muted); vertical-align: 1px; }
-    .pill.dob { color:#047857; border-color:#047857; }
-    .pill.nagn { color:#2563eb; border-color:#2563eb; }
-
     .btn2 {
       background: transparent; border: 1px solid var(--border); border-radius: 8px;
       color: var(--text); padding: 7px 14px; cursor: pointer; font-size: 14px; font-family: inherit;
     }
     .btn2:hover { border-color: var(--accent); color: var(--accent); }
-
     .how-list li { margin-bottom: 8px; font-size: 16px; }
     .empty { color: var(--muted); text-align: center; padding: 40px 20px; font-size: 15px; }
     @media (max-width: 620px) { h1 { font-size: 30px; } }
@@ -110,8 +121,7 @@
 
   <script>
     (function () {
-      var t = localStorage.getItem('theme');
-      if (t) document.documentElement.setAttribute('data-theme', t);
+      try { var t = localStorage.getItem('theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
     })();
   </script>
 </head>
@@ -122,8 +132,7 @@
       <a href="https://alex91132.github.io/" class="site-logo">← Портфолио</a>
       <nav class="site-nav">
         <a href="#data">Данные</a>
-        <a href="#summary">Сводка</a>
-        <a href="#carpet">Ковёр</a>
+        <a href="#carpet">График</a>
         <a href="#how">Принципы</a>
         <button id="themeBtn" class="theme-toggle" onclick="toggleTheme()" aria-label="Сменить тему">🌙</button>
       </nav>
@@ -135,17 +144,16 @@
     <section class="intro">
       <h1>Ковёр бурения</h1>
       <p class="lead">
-        Загрузите Excel со скважинами — и увидите график движения буровых установок:
-        какая БУ, в каком порядке и как долго обуривает кусты, с датами и количеством
-        скважин. Дополнительно — детальный ковёр по скважинам выбранного куста
-        и количественный режим «по суткам».
+        Загрузите графики бурения одного или нескольких месторождений — страница построит график движения
+        буровых установок (ГДБУ) по месяцам: в каком порядке каждая бригада обуривает кусты, даты начала
+        и окончания бурения куста, число скважин, вышкомонтажные работы между кустами и простой установки.
       </p>
       <div class="tags" style="margin-top:14px;">
-        <span class="tag">порядок бурения кустов по БУ</span>
-        <span class="tag">диаграмма Ганта на чистом SVG</span>
-        <span class="tag">парсер Excel по заголовкам</span>
-        <span class="tag">порядок столбцов любой</span>
-        <span class="tag">экспорт в PNG</span>
+        <span class="tag">ГДБУ по месяцам</span>
+        <span class="tag">несколько месторождений</span>
+        <span class="tag">ВМР и простой установки</span>
+        <span class="tag">проверка пересечений</span>
+        <span class="tag">чистый JS + SVG</span>
       </div>
     </section>
 
@@ -153,52 +161,59 @@
     <section id="data">
       <h2>1 · Данные</h2>
       <div class="dropzone" id="dropzone">
-        <div class="big">Перетащите сюда файл ВПУ (.xlsx) или выберите его</div>
-        <div class="sub">Страница работает локально в браузере — файл никуда не отправляется.<br>
-          Ожидаемая структура: столбцы «Куст», «Номер скважины», «Цикл бурения», «Цикл строительства»
-          и блоки фаз с датами («Монтаж», «Бурение», «Освоение», «Передвижка», …).</div>
+        <div class="big">Перетащите сюда графики бурения (.xlsx) — можно несколько</div>
+        <div class="sub">Каждый файл — своё месторождение (секция графика). Всё считается в браузере — файлы никуда не отправляются.<br>
+          Нужны столбцы «Куст», «Номер скважины», «Номер бригады», «Дата начала / окончания цикла бурения»
+          и блоки фаз с датами («Монтаж», «Демонтаж», «Бурение», …) — порядок столбцов любой.</div>
         <p style="margin:14px 0 0;">
-          <button type="button" class="btn-primary" id="pickBtn" style="cursor:pointer;">Выбрать файл</button>
-          <button type="button" class="btn2" id="demoBtn" style="margin-left:10px;">Демо-данные (4 куста Ванкора)</button>
+          <button type="button" class="btn-primary" id="pickBtn" style="cursor:pointer;">Выбрать файлы</button>
+          <button type="button" class="btn2" id="demoBtn" style="margin-left:10px;">Демо: 2 месторождения</button>
+          <button type="button" class="btn2" id="clearBtn" style="margin-left:10px;">Очистить</button>
         </p>
-        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" multiple>
       </div>
+      <div class="files" id="files"></div>
       <p class="status" id="status"></p>
 
       <div class="toolbar" id="toolbar" style="display:none;">
-        <div class="field" id="padField">
-          <label for="padSel">Кустовая площадка</label>
-          <select id="padSel"></select>
-        </div>
         <div class="field">
           <label>Режим</label>
           <div class="seg" role="group" aria-label="Режим отображения">
-            <button type="button" id="mode-rig" class="on">По установкам (ГДБУ)</button>
-            <button type="button" id="mode-cal">По скважинам куста</button>
+            <button type="button" id="mode-rig" class="on">Движение БУ (ГДБУ)</button>
+            <button type="button" id="mode-cal">Скважины куста</button>
             <button type="button" id="mode-cyc">Циклы (сутки)</button>
           </div>
+        </div>
+        <div class="field" id="yearField">
+          <label for="yFrom">Период, годы</label>
+          <select id="yFrom"></select> — <select id="yTo"></select>
+        </div>
+        <div class="field" id="mwField">
+          <label for="mw">Ширина месяца: <span id="mwVal"></span></label>
+          <input type="range" id="mw" min="8" max="64" step="2" value="26">
+        </div>
+        <div class="field" id="padField">
+          <label for="padSel">Кустовая площадка</label>
+          <select id="padSel"></select>
         </div>
         <label class="chk" id="optDatesWrap"><input type="checkbox" id="optDates" checked> даты на графике</label>
         <label class="chk" id="optSectionsWrap"><input type="checkbox" id="optSections"> бурение по колоннам</label>
         <div class="field">
           <label>&nbsp;</label>
+          <button type="button" class="btn2" id="todayBtn">К сегодняшней дате</button>
           <button type="button" class="btn2" id="pngBtn">Скачать PNG</button>
         </div>
       </div>
     </section>
 
-    <!-- СВОДКА -->
-    <section id="summary" style="display:none;">
-      <h2>2 · Сводка</h2>
-      <div class="cards" id="sumCards"></div>
-    </section>
-
-    <!-- КОВЁР -->
+    <!-- ГРАФИК -->
     <section id="carpet" style="display:none;">
-      <h2>3 · Ковёр бурения</h2>
+      <h2>2 · График</h2>
+      <div class="cards" id="sumCards"></div>
+      <details class="warnings" id="warnings" style="display:none;"></details>
       <div class="legend" id="legend"></div>
       <div class="chart-card" id="chartCard">
-        <div class="empty">Выберите куст выше — ковёр появится здесь.</div>
+        <div class="empty">Загрузите файл — график появится здесь.</div>
       </div>
     </section>
 
@@ -206,36 +221,27 @@
     <section id="how">
       <h2>Как это работает</h2>
       <ul class="how-list">
-        <li><b>Парсер — по заголовкам, а не по адресам ячеек.</b> Страница сама находит строку
-          с «Куст» / «Номер скважины», определяет блоки фаз по строке выше заголовков
-          (это объединённые ячейки «Бурение», «Монтаж», «Освоение», …) и сопоставляет
-          каждой фазе её «Дату начала», «Дату окончания» и «Количество дней».
-          Поэтому порядок и количество столбцов в файле могут быть любыми.</li>
-        <li><b>Режим «По установкам» (главный)</b> отвечает на вопрос «в каком порядке
-          какая БУ обуривает кусты»: строка — буровая установка (с бригадой), зелёная
-          полоса — кампания на кусте (последовательные скважины одной установки на одном
-          кусте), с датами начала/окончания и количеством скважин. Это язык ГДБУ —
-          графика движения буровых установок, — но с читаемыми подписями и тултипами
-          вместо вписывания текста в ячейки Excel. Паузы между кампаниями — переезд
-          или простой; демонтаж и передвижка показаны отдельно, если есть даты.</li>
-        <li><b>Режим «По скважинам куста»</b> строится по реальным датам файла: монтаж → бурение →
-          передвижка → освоение → обустройство → ввод. Если дата окончания пустая,
-          конец считается от количества дней. Наведите курсор на любой блок —
-          всплывёт полная карточка скважины и фазы.</li>
-        <li><b>Режим «Циклы»</b> — количественный ковёр: скважины куста выстраиваются
-          последовательно, ось — накопленные сутки; зелёным — цикл бурения,
-          серым — остальная часть цикла строительства. Так видно, сколько суток
-          «стоит» куст целиком.</li>
-        <li><b>Разбивка бурения по колоннам</b> (направление, кондуктор, техническая,
-          эксплуатационная, хвостовик) включается, если в файле есть даты по секциям —
-          тогда зелёный блок заменяется стопкой сегментов.</li>
-        <li><b>Чего здесь нет (честно):</b> проверок конфликтов буровых установок между кустами,
-          поправок на ГРП/ГНКТ (в файле это счётчики, а не интервалы) и авторазмещения
-          скважин без дат. Это планы развития — <a href="https://t.me/Alex91132" target="_blank" rel="noopener">напишите в Telegram</a>, если нужно.</li>
-        <li>Идея и методология — ГДБУ (график движения буровых установок) и модуль планирования
-          кустового бурения, которые я делал в РН-Ванкор; здесь он переосмыслен как
-          самостоятельный веб-инструмент: чистый JavaScript + SVG, без библиотек визуализации
-          (Excel парсит SheetJS).</li>
+        <li><b>Установка = месторождение + номер бригады.</b> Номера бригад в графиках бурения ведутся внутри
+          месторождения: бригада 4 на одном месторождении и бригада 4 на другом бурят одновременно — это разные
+          установки, поэтому каждый файл — своя секция графика. «Наименование вида БУ» в ключ не берётся:
+          у одной бригады оно меняется посреди куста; в подписи — самый частый вид.</li>
+        <li><b>Кампания на кусте</b> — подряд идущие скважины одной бригады на одном кусте. Начало — начало бурения
+          первой скважины, конец — окончание бурения последней (по «Дате начала / окончания цикла бурения»;
+          если её нет — по блоку «Бурение»). Скважины куста без дат входят в число скважин кампании.</li>
+        <li><b>ВМР и простой.</b> Всё между кустами одной бригады — вышкомонтажные работы. Внутри промежутка
+          отмечены работы, у которых в графике есть даты: демонтаж и стаскивание на старом кусте, переезд,
+          монтаж на новом. Часть промежутка, не покрытая ни одной работой, — простой установки
+          (штриховка): то, что стоит денег и что стоит сократить.</li>
+        <li><b>Проверки.</b> Если у бригады кусты пересекаются по времени или переход на новый куст идёт без времени
+          на ВМР, страница выводит предупреждение — так видны ошибки в графике до того, как они станут простоем.</li>
+        <li><b>Парсер — по заголовкам, а не по адресам ячеек.</b> Строка заголовков ищется по «Куст» и «Номер
+          скважины», блоки фаз — по объединённым ячейкам над ней. Строки-разделители с названием месторождения
+          и куста распознаются. Сверено с ручным ГДБУ: все 49 фактических кампаний двух месторождений совпали
+          по датам и числу скважин.</li>
+        <li><b>Скважины куста и циклы</b> — детальный ковёр выбранного куста по датам фаз (монтаж → бурение →
+          передвижка → освоение → ввод) и количественный режим по накопленным суткам.</li>
+        <li>Идея — из практики планирования кустового бурения: ГДБУ ведут в Excel вручную, вписывая даты и
+          кусты в объединённые ячейки, а увязку переездов установок проверяют глазами.</li>
       </ul>
     </section>
 
@@ -245,12 +251,13 @@
     <div class="container">
       © 2026 Александр Федоров ·
       <a href="https://t.me/Alex91132" target="_blank" rel="noopener">@Alex91132</a> ·
-      <a href="https://github.com/Alex91132/Alex91132.github.io" target="_blank" rel="noopener">исходники</a>
+      <a href="https://github.com/Alex91132/drilling-carpet" target="_blank" rel="noopener">исходники</a>
     </div>
   </footer>
 
   <div class="tip" id="tip"></div>
 
+  <script src="carpet-core.js"></script>
   <script src="demo-data.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
@@ -267,7 +274,7 @@
   function toggleTheme() {
     var next = currentTheme() === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
     updateThemeIcon();
   }
   updateThemeIcon();
@@ -276,14 +283,18 @@
   <script>
   (function () {
     'use strict';
-
+    var C = window.CarpetCore, DAY = C.DAY, t = C.t;
     var $ = function (id) { return document.getElementById(id); };
-    function norm(s) { return s == null ? '' : String(s).replace(/\s+/g, ' ').trim().toLowerCase(); }
     var fmtInt = new Intl.NumberFormat('ru-RU');
     function fmt1(x) { return x.toLocaleString('ru-RU', { maximumFractionDigits: 1, minimumFractionDigits: 1 }); }
     function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function ruDate(iso) { if (!iso) return ''; var p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; }
+    function ruShort(iso) { if (!iso) return ''; var p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0].slice(2); }
+    function padLabel(p) { return /^(куст|кп)/i.test(p) ? p : 'КП ' + p; }
+    var MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    var TODAY = (function () { var d = new Date(); return C.iso(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12)); })();
 
-    /* ============ Фазы ============ */
+    /* ============ Фазы (ковёр куста) ============ */
     var PHASES = [
       { k: 'mount',      label: 'Монтаж',            color: 'var(--ph-mount)' },
       { k: 'drill',      label: 'Бурение',           color: 'var(--ph-drill)' },
@@ -295,235 +306,247 @@
       { k: 'demount',    label: 'Демонтаж',          color: 'var(--ph-demount)' },
       { k: 'skid',       label: 'Стаскивание БУ',    color: 'var(--ph-skid)' }
     ];
-    var PHASE_BY_KEY = {};
-    PHASES.forEach(function (p) { PHASE_BY_KEY[p.k] = p; });
-
-    var GROUP_MAP = {
-      'бурение': 'drill', 'освоение': 'completion',
-      'ввод скважины в эксплуатацию (вывод скважины на режим)': 'input',
-      'ожидание освоения(испытания)': 'wait', 'ожидание освоения (испытания)': 'wait',
-      'консервация': 'conservation', 'передвижка': 'move',
-      'монтаж': 'mount', 'демонтаж': 'demount', 'обустройство (обвязка)': 'tie',
-      'стаскивание буровой установки': 'skid',
-      'бурение направления': 'направление', 'бурение кондуктора': 'кондуктор',
-      'бурение технической колонны': 'техколонна',
-      'бурение эксплуатационной колонны': 'экспколонна',
-      'бурение хвостовика': 'хвостовик'
-    };
-    var SECTION_ORDER = ['направление', 'кондуктор', 'техколонна', 'экспколонна', 'хвостовик'];
     var SECTION_LABEL = { 'направление': 'направление', 'кондуктор': 'кондуктор', 'техколонна': 'тех. колонна', 'экспколонна': 'экспл. колонна', 'хвостовик': 'хвостовик' };
-
-    var BASE_COLS = {
-      'порядок бурения скважины': 'order', 'куст': 'pad', 'номер скважины': 'well',
-      'наименование скважины': 'wellName',
-      'проходка по скважине, м': 'depth', 'проходка по скважине': 'depth',
-      'цикл бурения': 'dd', 'цикл строительства': 'bd',
-      'коммерческая скорость, м/мес.': 'speed', 'коммерческая скорость, м/мес': 'speed',
-      'наименование вида бу': 'rig', 'номер бригады': 'crew',
-      'количество грп/стадий мгрп': 'frp', 'количество грп/стадий мгрп': 'frp',
-      'количество гнкт': 'gnkt'
-    };
-    var TYPE_COLS = { 'классификация скважины по профилю ствола (короткое)': 'type', 'классификация скважины по назначению (короткое)': 'purpose' };
-
-    /* ============ Даты ============ */
-    // Всё в UTC-полдень, чтобы не цеплять таймзоны; формат в интерфейсе — дд.мм.гггг
-    function toISO(d) { return d.toISOString().slice(0, 10); }
-    function parseDate(v) {
-      if (v == null || v === '') return null;
-      if (v instanceof Date && !isNaN(v)) return toISO(new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate(), 12)));
-      if (typeof v === 'number' && isFinite(v)) { // экселевский сериал
-        var ms = Math.round((v - 25569) * 86400000);
-        return toISO(new Date(ms + 12 * 3600000));
-      }
-      var s = String(v).trim();
-      var m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/);
-      if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
-      m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (m) return m[1] + '-' + m[2] + '-' + m[3];
-      return null;
-    }
-    function t(iso) { return iso ? Date.parse(iso + 'T12:00:00Z') : null; }
-    function daysBetween(a, b) { return Math.round((t(b) - t(a)) / 86400000); }
-    function ruDate(iso) {
-      if (!iso) return '';
-      var p = iso.split('-');
-      return p[2] + '.' + p[1] + '.' + p[0];
-    }
-
-    /* ============ Парсер книги ============ */
-    function parseWorkbook(wb) {
-      var sheet = null, headerRow = 0;
-      outer:
-      for (var si = 0; si < wb.SheetNames.length; si++) {
-        var ws = wb.Sheets[wb.SheetNames[si]];
-        var rng = ws['!ref'];
-        if (!rng) continue;
-        var dim = XLSX.utils.decode_range(rng);
-        for (var r = 0; r <= Math.min(dim.e.r, 14); r++) {
-          var found = { pad: -1, well: -1 };
-          for (var c = 0; c <= dim.e.c; c++) {
-            var n = norm(ws[XLSX.utils.encode_cell({ r: r, c: c })] ? ws[XLSX.utils.encode_cell({ r: r, c: c })].w || ws[XLSX.utils.encode_cell({ r: r, c: c })].v : null);
-            if (n === 'куст') found.pad = c;
-            if (n === 'номер скважины') found.well = c;
-          }
-          if (found.pad >= 0 && found.well >= 0) { sheet = ws; headerRow = r; break outer; }
-        }
-      }
-      if (!sheet) throw new Error('Не нашёл строку заголовков со столбцами «Куст» и «Номер скважины». Проверьте формат файла.');
-
-      var dim = XLSX.utils.decode_range(sheet['!ref']);
-      var hr = headerRow, gr = headerRow - 1; // строка фаз-групп над заголовками
-
-      function cell(r, c) {
-        if (r < 0 || c < 0) return undefined;
-        var addr = XLSX.utils.encode_cell({ r: r, c: c });
-        return sheet[addr];
-      }
-      function val(r, c) {
-        var x = cell(r, c);
-        if (!x) return null;
-        return x.t === 'd' ? x.v : (x.v !== undefined ? x.v : null);
-      }
-      // группы фаз: ближайшая непустая известная ячейка слева в строке gr
-      var groupAt = {};
-      var curGroup = null;
-      for (var c = 0; c <= dim.e.c; c++) {
-        var g = norm(val(gr, c));
-        if (g && GROUP_MAP[g]) curGroup = GROUP_MAP[g];
-        else if (g && g.length > 2) curGroup = null; // чужой заголовок сбивает группу
-        groupAt[c] = curGroup;
-      }
-
-      var FIELD_BY_HEADER = { 'дата начала': 's', 'дата окончания': 'e', 'количество дней': 'd', 'расстояние на передвижку': 'dist' };
-      var phaseCols = {}; // phase -> {s,e,d,dist}
-      var baseCols = {};  // field -> col
-      for (var c = 0; c <= dim.e.c; c++) {
-        var h = norm(val(hr, c));
-        if (!h) continue;
-        var f = FIELD_BY_HEADER[h];
-        if (f) {
-          var gk = groupAt[c];
-          if (gk) phaseCols[gk] = phaseCols[gk] || {}, phaseCols[gk][f] = c;
-          continue;
-        }
-        if (BASE_COLS[h] && baseCols[BASE_COLS[h]] === undefined) { baseCols[BASE_COLS[h]] = c; continue; }
-        for (var tk in TYPE_COLS) if (h === tk && baseCols[TYPE_COLS[tk]] === undefined) baseCols[TYPE_COLS[tk]] = c;
-        if (h.indexOf('профилю ствола') >= 0 && baseCols.type === undefined) baseCols.type = c;
-        if (h.indexOf('назначению') >= 0 && baseCols.purpose === undefined) baseCols.purpose = c;
-      }
-      if (baseCols.well === undefined) throw new Error('Нет столбца «Номер скважины».');
-      if (!Object.keys(phaseCols).length) throw new Error('Не нашёл блоков фаз (Монтаж, Бурение, Освоение…) над заголовками. Нужна строка с названиями блоков.');
-
-      function num(v) { return (typeof v === 'number' && isFinite(v)) ? v : (v != null && v !== '' && isFinite(parseFloat(v)) ? parseFloat(v) : null); }
-
-      var pads = {}, padOrder = [], curPad = '';
-      for (var r = hr + 1; r <= dim.e.r; r++) {
-        var padRaw = val(r, baseCols.pad), wellRaw = val(r, baseCols.well);
-        var aRaw = baseCols.order !== undefined ? val(r, baseCols.order) : null;
-        if (wellRaw == null || wellRaw === '') {
-          if (padRaw != null && padRaw !== '' && aRaw == null) {
-            curPad = String(padRaw).trim();
-            if (curPad && !pads[curPad]) { pads[curPad] = []; padOrder.push(curPad); }
-          }
-          continue;
-        }
-        var w = {
-          pad: (padRaw != null && padRaw !== '') ? String(padRaw).trim() : curPad,
-          n: String(wellRaw).trim(),
-          order: num(aRaw),
-          type: baseCols.type !== undefined ? String(val(r, baseCols.type) != null ? val(r, baseCols.type) : '').trim() : '',
-          purpose: baseCols.purpose !== undefined ? String(val(r, baseCols.purpose) != null ? val(r, baseCols.purpose) : '').trim() : '',
-          depth: num(baseCols.depth !== undefined ? val(r, baseCols.depth) : null),
-          dd: num(baseCols.dd !== undefined ? val(r, baseCols.dd) : null),
-          bd: num(baseCols.bd !== undefined ? val(r, baseCols.bd) : null),
-          speed: num(baseCols.speed !== undefined ? val(r, baseCols.speed) : null),
-          rig: baseCols.rig !== undefined ? String(val(r, baseCols.rig) != null ? val(r, baseCols.rig) : '').trim() : '',
-          crew: val(r, baseCols.crew !== undefined ? baseCols.crew : -1),
-          frp: num(baseCols.frp !== undefined ? val(r, baseCols.frp) : null),
-          gnkt: num(baseCols.gnkt !== undefined ? val(r, baseCols.gnkt) : null),
-          ph: {}
-        };
-        var anyPhase = false;
-        for (var gk in phaseCols) {
-          var pc = phaseCols[gk];
-          var rec = {
-            s: parseDate(pc.s !== undefined ? val(r, pc.s) : null),
-            e: parseDate(pc.e !== undefined ? val(r, pc.e) : null),
-            d: num(pc.d !== undefined ? val(r, pc.d) : null)
-          };
-          if (pc.dist !== undefined) rec.dist = num(val(r, pc.dist));
-          if (rec.s || rec.e || (rec.d && rec.d > 0)) {
-            anyPhase = true;
-            if (SECTION_ORDER.indexOf(gk) >= 0) {
-              w.ph.sections = w.ph.sections || [];
-              w.ph.sections.push({ k: gk, s: rec.s, e: rec.e, d: rec.d });
-            } else {
-              w.ph[gk] = rec;
-            }
-          }
-        }
-        if (!w.pad) w.pad = 'Без куста';
-        if (!pads[w.pad]) { pads[w.pad] = []; padOrder.push(w.pad); }
-        pads[w.pad].push(w);
-      }
-      if (!padOrder.length) throw new Error('В файле не нашлось строк со скважинами.');
-      padOrder.forEach(function (p) {
-        pads[p].sort(function (a, b) {
-          var ao = a.order != null ? a.order : Infinity, bo = b.order != null ? b.order : Infinity;
-          if (ao !== bo) return ao - bo;
-          var at = firstDate(a), bt = firstDate(b);
-          return (at == null ? Infinity : at) - (bt == null ? Infinity : bt);
-        });
-      });
-      return padOrder.map(function (p) { return { name: p, wells: pads[p] }; }).sort(function (a, b) {
-        return a.name.localeCompare(b.name, 'ru', { numeric: true });
-      });
-    }
-    function firstDate(w) {
-      var best = null;
-      ['mount', 'drill', 'completion', 'input'].forEach(function (k) {
-        var s = w.ph[k] && w.ph[k].s;
-        if (s && (best == null || t(s) < best)) best = t(s);
-      });
-      return best;
-    }
+    var VMR_PART = { demount: 'var(--ph-demount)', skid: 'var(--ph-skid)', reloc: 'var(--ph-move)', mount: 'var(--ph-mount)' };
 
     /* ============ Состояние ============ */
-    var S = { pads: [], padIdx: -1, mode: 'rig', showDates: true, sections: false, hidden: {} };
+    var S = { files: [], pads: [], padIdx: -1, sched: null, mode: 'rig', mw: 26, yFrom: null, yTo: null, showDates: true, sections: false, hidden: {} };
+    var tips = [];
 
-    function setData(pads, srcLabel) {
-      S.pads = pads;
-      S.rigRange = null;
-      var sel = $('padSel');
-      sel.innerHTML = pads.map(function (p, i) {
-        return '<option value="' + i + '">' + esc(p.name) + ' — ' + p.wells.length + ' скв.</option>';
-      }).join('');
-      $('toolbar').style.display = '';
-      $('summary').style.display = '';
-      $('carpet').style.display = '';
-      var pref = 0;
-      for (var i = 0; i < pads.length; i++) if (pads[i].wells.length > pads[pref].wells.length) pref = i;
-      sel.value = pref;
-      S.padIdx = pref;
-      $('optSections').disabled = !hasSections();
-      $('optSections').checked = false;
-      S.sections = false;
-      setStatus('Загружено: ' + pads.length + ' куст(ов), ' + pads.reduce(function (a, p) { return a + p.wells.length; }, 0) +
-        ' скважин (' + srcLabel + '). Файл обрабатывается локально и никуда не отправляется.');
+    function rebuild(msg) {
+      S.pads = C.padsOf(S.files);
+      S.sched = S.files.length ? C.buildSchedule(S.files) : null;
+      renderFiles();
+      var has = S.files.length > 0;
+      $('toolbar').style.display = has ? '' : 'none';
+      $('carpet').style.display = has ? '' : 'none';
+      if (!has) { setStatus(msg || ''); return; }
+      // кусты — списком по месторождениям
+      var sel = $('padSel'), html = '', curSrc = null;
+      S.pads.forEach(function (p, i) {
+        if (p.source !== curSrc) { if (curSrc !== null) html += '</optgroup>'; html += '<optgroup label="' + esc(p.field) + '">'; curSrc = p.source; }
+        html += '<option value="' + i + '">' + esc(padLabel(p.name)) + ' — ' + p.wells.length + ' скв.</option>';
+      });
+      sel.innerHTML = html + (curSrc !== null ? '</optgroup>' : '');
+      if (S.padIdx < 0 || S.padIdx >= S.pads.length) {
+        var pref = 0;
+        for (var i = 0; i < S.pads.length; i++) if (S.pads[i].wells.length > S.pads[pref].wells.length) pref = i;
+        S.padIdx = pref;
+      }
+      sel.value = S.padIdx;
+      fillYears();
+      var n = S.files.reduce(function (a, f) { return a + f.wells.length; }, 0);
+      setStatus(msg || ('Загружено: ' + S.files.length + ' файл(а), ' + fmtInt.format(n) + ' скважин. Файлы обрабатываются локально.'));
       setMode(S.mode);
     }
-    function setStatus(msg, isErr) {
-      var el = $('status');
-      el.textContent = msg;
-      el.className = 'status' + (isErr ? ' err' : '');
+    /** Период графика: по умолчанию последние ~10 лет до конца плана — как в ручном ГДБУ. */
+    function fillYears() {
+      var r = S.sched && S.sched.range;
+      if (!r) return;
+      var a = +r.a.slice(0, 4), b = +r.b.slice(0, 4), now = +TODAY.slice(0, 4);
+      var opts = '';
+      for (var y = a; y <= b; y++) opts += '<option value="' + y + '">' + y + '</option>';
+      $('yFrom').innerHTML = opts; $('yTo').innerHTML = opts;
+      if (S.yFrom == null || S.yFrom < a || S.yFrom > b) S.yFrom = Math.min(b, Math.max(a, now - 9));
+      if (S.yTo == null || S.yTo < S.yFrom || S.yTo > b) S.yTo = b;
+      $('yFrom').value = S.yFrom; $('yTo').value = S.yTo;
     }
+    function renderFiles() {
+      $('files').innerHTML = S.files.map(function (f, i) {
+        return '<span class="chip"><b>' + esc(f.fields.join(' · ')) + '</b><span class="m">' + esc(f.source) + ' · ' +
+          fmtInt.format(f.wells.length) + ' скв.</span><button type="button" data-i="' + i + '" title="Убрать файл" aria-label="Убрать файл">×</button></span>';
+      }).join('');
+      Array.prototype.forEach.call($('files').querySelectorAll('button[data-i]'), function (b) {
+        b.addEventListener('click', function () { S.files.splice(+this.getAttribute('data-i'), 1); S.padIdx = -1; rebuild(); });
+      });
+    }
+    function setStatus(msg, isErr) { var el = $('status'); el.textContent = msg; el.className = 'status' + (isErr ? ' err' : ''); }
     function pad() { return S.pads[S.padIdx]; }
-    function hasSections() {
-      var p = pad();
-      return !!p && p.wells.some(function (w) { return w.ph.sections && w.ph.sections.length; });
+    function hasSections() { var p = pad(); return !!p && p.wells.some(function (w) { return w.ph.sections && w.ph.sections.length; }); }
+    function card(v, l, warn) { return '<div class="kcard' + (warn ? ' warn' : '') + '"><div class="num">' + v + '</div><div class="lab">' + l + '</div></div>'; }
+
+    /* ============ ГДБУ: сводка и предупреждения ============ */
+    function renderRigSummary() {
+      var sc = S.sched, rigs = 0, padsN = 0, wells = 0, vmr = 0, idle = 0, fields = 0;
+      sc.sections.forEach(function (s) {
+        fields++;
+        s.rigs.forEach(function (r) { rigs++; padsN += r.camps.length; wells += r.wellsN; vmr += r.vmrDays; idle += r.idleDays; });
+      });
+      var nw = sc.warnings.length;
+      $('sumCards').innerHTML = [
+        card(rigs, 'буровых установок (бригад) · ' + fields + ' месторожд.'),
+        card(fmtInt.format(padsN), 'кампаний на кустах'),
+        card(fmtInt.format(wells), 'скважин' + (sc.undated ? ' · ещё ' + sc.undated + ' без дат бурения' : '')),
+        sc.range ? card(ruShort(sc.range.a) + ' — ' + ruShort(sc.range.b), 'период графика') : '',
+        card(fmtInt.format(Math.round(vmr)) + ' сут', 'ВМР между кустами, всего'),
+        card(fmtInt.format(Math.round(idle)) + ' сут', 'простой: промежутки без работ в графике (' + (vmr ? Math.round(idle / vmr * 100) : 0) + ' % ВМР)', idle > 0),
+        card(nw, 'предупреждений по графику', nw > 0)
+      ].join('');
+      var wEl = $('warnings');
+      if (!nw) { wEl.style.display = 'none'; return; }
+      wEl.style.display = '';
+      wEl.innerHTML = '<summary>Предупреждения: ' + nw + '</summary><ul>' + sc.warnings.map(function (w) {
+        return '<li>' + esc(fieldOf(w.section) + ' · ' + w.text) + '</li>';
+      }).join('') + '</ul>';
+    }
+    function fieldOf(src) { var s = S.sched.sections.filter(function (x) { return x.id === src; })[0]; return s ? s.title : src; }
+
+    /* ============ ГДБУ: график по месяцам ============ */
+    function renderRigChart() {
+      tips = [];
+      var sc = S.sched;
+      if (!sc || !sc.range) {
+        $('chartCard').innerHTML = '<div class="empty">Нет скважин с датами бурения — график установок построить не из чего.</div>';
+        $('legend').innerHTML = '';
+        return;
+      }
+      var y0 = S.yFrom || +sc.range.a.slice(0, 4), y1 = S.yTo || +sc.range.b.slice(0, 4);
+      var pa = C.iso(Date.UTC(y0, 0, 1)), pb = C.iso(Date.UTC(y1, 11, 31)), hidden = 0;
+      function inPeriod(r) { return r.camps.some(function (c) { return c.e >= pa && c.s <= pb; }); }
+      var M = (y1 - y0 + 1) * 12, MW = S.mw, CW = M * MW, LW = 236;
+      var yearH = 22, monthH = 18, secH = 30, rowH = 64, HEAD = yearH + monthH;
+      function X(ms) {   // месяцы равной ширины, внутри месяца — пропорционально дням
+        var d = new Date(ms), mi = (d.getUTCFullYear() - y0) * 12 + d.getUTCMonth();
+        var ms0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), ms1 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+        return (mi + (ms - ms0) / (ms1 - ms0)) * MW;
+      }
+      var rows = [], H = HEAD;
+      sc.sections.forEach(function (s) {
+        var vis = s.rigs.filter(inPeriod);
+        hidden += s.rigs.length - vis.length;
+        rows.push({ kind: 'sec', s: s, y: H, n: vis.length }); H += secH;
+        vis.forEach(function (r, i) { rows.push({ kind: 'rig', r: r, s: s, y: H, odd: i % 2 }); H += rowH; });
+      });
+      H += 8;
+
+      var L = '<svg class="left" width="' + LW + '" height="' + H + '" viewBox="0 0 ' + LW + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit">';
+      var R = '<svg id="carpetSvg" width="' + CW + '" height="' + H + '" viewBox="0 0 ' + CW + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit">';
+      L += '<text x="12" y="' + (yearH + 12) + '" font-size="11.5" font-weight="700" fill="var(--muted)">Бригада · вид БУ</text>';
+
+      for (var y = y0; y <= y1; y++) {
+        var xa = X(Date.UTC(y, 0, 1)), xb = X(Date.UTC(y + 1, 0, 1));
+        R += '<rect x="' + xa + '" y="0" width="' + (xb - xa) + '" height="' + yearH + '" fill="var(--border)" opacity="' + (y % 2 ? 0.35 : 0.6) + '"/>' +
+          '<text x="' + ((xa + xb) / 2) + '" y="15" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">' + y + '</text>';
+        for (var m = 0; m < 12; m++) {
+          var mx = X(Date.UTC(y, m, 1));
+          if (MW >= 12) R += '<text x="' + (mx + MW / 2) + '" y="' + (yearH + 13) + '" text-anchor="middle" font-size="' + (MW >= 22 ? 10 : 9) + '" fill="var(--muted)">' +
+            (MW >= 22 ? MONTHS[m] : MONTHS[m].charAt(0)) + '</text>';
+          R += '<line x1="' + mx + '" y1="' + yearH + '" x2="' + mx + '" y2="' + H + '" stroke="var(--border)" stroke-width="' + (m === 0 ? 1.6 : 0.8) + '" opacity="' + (m === 0 ? 1 : 0.7) + '"/>';
+        }
+      }
+      R += '<line x1="0" y1="' + HEAD + '" x2="' + CW + '" y2="' + HEAD + '" stroke="var(--border)"/>';
+      R += '<defs><pattern id="idleHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+        '<rect width="6" height="6" fill="var(--ph-idle)" opacity="0.18"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--ph-idle)" stroke-width="2.4"/></pattern></defs>';
+
+      rows.forEach(function (row) {
+        if (row.kind === 'sec') {
+          // подпись секции — в закреплённой левой колонке, иначе уезжает при прокрутке
+          var title = row.s.title.split(' · '), short = title[0].length > 18 ? title[0].slice(0, 17) + '…' : title[0];
+          L += '<rect x="0" y="' + row.y + '" width="' + LW + '" height="' + secH + '" fill="var(--accent)" opacity="0.12"/>' +
+            '<text x="12" y="' + (row.y + 19) + '" font-size="13.5" font-weight="700" fill="var(--text)">' + esc(short) +
+            (title.length > 1 ? '<tspan font-weight="400" fill="var(--muted)"> +' + (title.length - 1) + '</tspan>' : '') +
+            '<tspan font-size="11.5" font-weight="400" fill="var(--muted)"> · ' + row.n + ' бр.</tspan>' +
+            '<title>' + esc(row.s.title + ' · ' + row.s.source + ' · бригад в периоде ' + row.n + ' из ' + row.s.rigs.length) + '</title></text>';
+          R += '<rect x="0" y="' + row.y + '" width="' + CW + '" height="' + secH + '" fill="var(--accent)" opacity="0.12"/>';
+          return;
+        }
+        var r = row.r, yy = row.y;
+        if (row.odd) {
+          L += '<rect x="0" y="' + yy + '" width="' + LW + '" height="' + rowH + '" fill="var(--border)" opacity="0.25"/>';
+          R += '<rect x="0" y="' + yy + '" width="' + CW + '" height="' + rowH + '" fill="var(--border)" opacity="0.25"/>';
+        }
+        var typeTxt = r.rigType ? (r.rigType.length > 26 ? r.rigType.slice(0, 25) + '…' : r.rigType) : '';
+        L += '<text x="12" y="' + (yy + 22) + '" font-size="14" font-weight="700" fill="var(--text)">' + esc(r.label) + '</text>' +
+          '<text x="12" y="' + (yy + 38) + '" font-size="11.5" fill="var(--muted)">' + esc(typeTxt) + (r.rigTypes.length > 1 ? ' +' + (r.rigTypes.length - 1) : '') + '</text>' +
+          '<text x="12" y="' + (yy + 53) + '" font-size="11" fill="var(--muted)">' + r.camps.length + ' КП · ' + r.wellsN + ' скв.' +
+          (r.idleDays >= 1 ? ' · простой ' + fmtInt.format(Math.round(r.idleDays)) + ' сут' : '') + '</text>';
+
+        var barY = yy + 21, barH = 20;
+        // ВМР: работы по датам графика и простой между ними
+        r.gaps.forEach(function (g) {
+          if (g.b < pa || g.a > pb) return;
+          var x1 = Math.max(0, X(t(g.a))), x2 = Math.min(CW, X(t(g.b)));
+          if (x2 - x1 < 1) return;
+          R += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + (x2 - x1).toFixed(1) + '" height="' + barH + '" rx="3" fill="' +
+            (g.hasData ? 'url(#idleHatch)' : 'var(--ph-vmr)') + '" opacity="' + (g.hasData ? 1 : 0.55) + '" stroke="rgba(0,0,0,.22)"/>';
+          g.parts.forEach(function (p) {
+            var px1 = Math.max(0, X(p.a)), pw = Math.max(1, Math.min(CW, X(p.b)) - px1);
+            R += '<rect x="' + px1.toFixed(1) + '" y="' + barY + '" width="' + pw.toFixed(1) + '" height="' + barH + '" fill="var(--ph-vmr)" stroke="rgba(0,0,0,.15)"/>' +
+              '<rect x="' + px1.toFixed(1) + '" y="' + (barY + barH - 4) + '" width="' + pw.toFixed(1) + '" height="4" fill="' + VMR_PART[p.k] + '"/>';
+          });
+          if (x2 - x1 >= 30)
+            R += '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (barY + 13) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1f2937">ВМР</text>';
+          var det = g.parts.map(function (p) { return p.label + ' ' + fmtInt.format(Math.round(p.days)) + ' сут'; }).join(', ');
+          tips.push({ x: x1, w: x2 - x1, y: barY, h: barH, html:
+            '<b>' + esc(r.label) + '</b> · ВМР: ' + esc(padLabel(g.from)) + ' → ' + esc(padLabel(g.to)) +
+            '<br><span class="m">' + ruDate(g.a) + ' → ' + ruDate(g.b) + ' · ' + fmtInt.format(Math.round(g.days)) + ' сут</span>' +
+            (g.hasData ? '<br>работы по графику: ' + esc(det) + '<br><b style="color:var(--ph-idle)">простой ' + fmtInt.format(Math.round(g.idle)) + ' сут</b>'
+              : '<br><span class="m">работ ВМР с датами в графике нет — состав промежутка неизвестен</span>') });
+        });
+        // кампании: «КП (скв.)» над баром, даты под ним; если тесно — подпись под баром, иначе только в подсказке
+        var laneTop = -Infinity, laneBot = -Infinity;
+        r.camps.forEach(function (c) {
+          if (c.e < pa || c.s > pb) return;
+          var x1 = Math.max(0, X(t(c.s))), x2 = Math.min(CW, X(t(c.e) + DAY / 2)), bw = Math.max(x2 - x1, 3);
+          var label = padLabel(c.pad) + ' (' + c.n + ')', lw = label.length * 6.3, dates = ruShort(c.s) + ' – ' + ruShort(c.e), dw = dates.length * 5.4;
+          var past = c.e < TODAY;
+          R += '<rect class="camp" data-pad="' + esc(c.padKey) + '" x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + bw.toFixed(1) + '" height="' + barH +
+            '" rx="3" fill="var(--ph-drill)" opacity="' + (past ? 1 : 0.62) + '" stroke="rgba(0,0,0,.3)"/>';
+          var lx = Math.max(x1, laneTop + 6);
+          if (lx < x1 + Math.max(bw, 40) && lx + lw < CW) {
+            R += '<text x="' + lx.toFixed(1) + '" y="' + (barY - 5) + '" font-size="11" font-weight="700" fill="var(--text)" style="paint-order:stroke;stroke:var(--card);stroke-width:3px">' + esc(label) + '</text>';
+            laneTop = lx + lw;
+            if (S.showDates && bw >= dw + 4 && x1 > laneBot) {
+              R += '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (barY + barH + 11) + '" text-anchor="middle" font-size="9.5" fill="var(--muted)">' + dates + '</text>';
+              laneBot = x2;
+            }
+          } else {
+            var bx = Math.max(x1, laneBot + 6);
+            if (bx < x1 + Math.max(bw, 40)) {
+              R += '<text x="' + bx.toFixed(1) + '" y="' + (barY + barH + 11) + '" font-size="10" font-weight="700" fill="var(--text)" style="paint-order:stroke;stroke:var(--card);stroke-width:3px">' + esc(label) + '</text>';
+              laneBot = bx + lw * 0.92;
+            }
+          }
+          var names = c.wells.map(function (w) { return w.n; }).concat(c.undated.map(function (w) { return w.n + '*'; }));
+          tips.push({ x: x1, w: bw, y: barY, h: barH, html:
+            '<b>' + esc(r.label) + '</b> · ' + esc(Object.keys(c.types).join(', ')) + '<br>' + esc(padLabel(c.pad)) + ' · <b>' + c.n + ' скв.</b> (' +
+            esc(names.slice(0, 10).join(', ')) + (names.length > 10 ? '…' : '') + ')' +
+            '<br><span class="m">бурение ' + ruDate(c.s) + ' → ' + ruDate(c.e) + ' · ' + fmtInt.format(Math.round((t(c.e) - t(c.s)) / DAY)) + ' сут' +
+            (c.drillDays ? ' · цикл бурения ' + fmtInt.format(Math.round(c.drillDays)) + ' сут' : '') + '</span>' +
+            (c.undated.length ? '<br><span class="m">* без дат бурения в графике</span>' : '') +
+            '<br><span class="m">' + (past ? 'факт' : 'план') + ' · нажмите — ковёр куста</span>' });
+        });
+      });
+      var tx = X(t(TODAY));
+      if (tx > 0 && tx < CW) R += '<line x1="' + tx + '" y1="' + yearH + '" x2="' + tx + '" y2="' + H + '" stroke="var(--ph-idle)" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+        '<text x="' + (tx + 4) + '" y="' + (HEAD - 4) + '" font-size="10" font-weight="700" fill="var(--ph-idle)">сегодня</text>';
+      L += '</svg>'; R += '</svg>';
+
+      var keep = $('gdbu') ? $('gdbu').scrollLeft : null;
+      $('chartCard').innerHTML = '<div class="gdbu" id="gdbu">' + L + R + '</div>';
+      S.lastRig = { LW: LW, CW: CW, H: H, todayX: tx };
+      if (keep != null) $('gdbu').scrollLeft = keep;
+      else if (tx > 0) $('gdbu').scrollLeft = Math.max(0, tx - $('gdbu').clientWidth * 0.6);   // первый показ — к сегодняшней дате
+      $('legend').innerHTML =
+        '<span><i class="sw" style="background:var(--ph-drill)"></i>бурение куста — факт</span>' +
+        '<span><i class="sw" style="background:var(--ph-drill);opacity:.62"></i>план</span>' +
+        '<span><i class="sw" style="background:var(--ph-vmr)"></i>ВМР по датам графика: полоска снизу — <i class="sw" style="background:var(--ph-demount)"></i>демонтаж <i class="sw" style="background:var(--ph-move)"></i>переезд <i class="sw" style="background:var(--ph-mount)"></i>монтаж</span>' +
+        '<span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--ph-idle) 0 2px,transparent 2px 5px)"></i>простой — промежуток без работ</span>' +
+        (hidden ? '<span style="font-size:12.5px;">скрыто бригад без работ в выбранном периоде: ' + hidden + '</span>' : '') +
+        '<span style="font-size:12.5px;">прокрутка — по горизонтали · ширина месяца — в панели выше · клик по кусту — его ковёр</span>';
+      wireTips();
+      Array.prototype.forEach.call(document.querySelectorAll('#carpetSvg .camp'), function (el) {
+        el.addEventListener('click', function () {
+          var key = this.getAttribute('data-pad');
+          for (var i = 0; i < S.pads.length; i++) if (S.pads[i].key === key) { S.padIdx = i; $('padSel').value = i; break; }
+          $('tip').style.display = 'none';
+          setMode('cal');
+          $('carpet').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
     }
 
-    /* ============ Сводка ============ */
+    /* ============ Ковёр куста: календарь и циклы ============ */
     function renderSummary() {
       var p = pad();
       if (!p) return;
@@ -533,8 +556,8 @@
       var dd = wells.reduce(function (a, w) { return a + (w.dd || 0); }, 0);
       var bds = wells.filter(function (w) { return w.bd != null; });
       var bdAvg = bds.length ? bds.reduce(function (a, w) { return a + w.bd; }, 0) / bds.length : null;
-      var rigs = [];
-      wells.forEach(function (w) { if (w.rig && rigs.indexOf(w.rig) < 0) rigs.push(w.rig); });
+      var crews = [];
+      wells.forEach(function (w) { var k = w.crew ? 'бр. ' + w.crew : w.rig; if (k && crews.indexOf(k) < 0) crews.push(k); });
       var t0 = null, t1 = null;
       wells.forEach(function (w) {
         for (var k in w.ph) {
@@ -546,24 +569,17 @@
         if (a) { var x = t(a); if (t0 == null || x < t0) t0 = x; if (t1 == null || x > t1) t1 = x; }
         if (b) { var y = t(b); if (t1 == null || y > t1) t1 = y; if (t0 == null || y < t0) t0 = y; }
       }
-      var span = (t0 != null && t1 != null) ? Math.round((t1 - t0) / 86400000) : null;
-      var cards = [
-        num2(wells.length, 'скважин на кусте' + (dob ? ' · доб. ' + dob + ' / нагн. ' + (wells.length - dob) : '')),
-        depth ? num2(fmtInt.format(Math.round(depth)) + ' м', 'суммарная проходка') : null,
-        dd ? num2(fmtInt.format(Math.round(dd)) + ' сут', 'суммарный цикл бурения') : null,
-        bdAvg != null ? num2(fmt1(bdAvg) + ' сут', 'средний цикл строительства') : null,
-        span != null ? num2(fmtInt.format(span) + ' дн', 'срок строительства куста (по датам)') : null,
-        num2(rigs.length, 'типов БУ: ' + (rigs.slice(0, 2).join(', ') || '—') + (rigs.length > 2 ? '…' : ''))
-      ];
-      $('sumCards').innerHTML = cards.filter(Boolean).join('');
-      function num2(v, l) {
-        return '<div class="kcard"><div class="num">' + v + '</div><div class="lab">' + l + '</div></div>';
-      }
+      var span = (t0 != null && t1 != null) ? Math.round((t1 - t0) / DAY) : null;
+      $('sumCards').innerHTML = [
+        card(wells.length, 'скважин · ' + padLabel(p.name) + ' · ' + p.field + (dob ? ' · доб. ' + dob + ' / прочие ' + (wells.length - dob) : '')),
+        depth ? card(fmtInt.format(Math.round(depth)) + ' м', 'суммарная проходка') : '',
+        dd ? card(fmtInt.format(Math.round(dd)) + ' сут', 'суммарный цикл бурения') : '',
+        bdAvg != null ? card(fmt1(bdAvg) + ' сут', 'средний цикл строительства') : '',
+        span != null ? card(fmtInt.format(span) + ' дн', 'срок строительства куста (по датам)') : '',
+        card(crews.length, 'бригад: ' + (crews.slice(0, 3).join(', ') || '—') + (crews.length > 3 ? '…' : ''))
+      ].join('');
+      $('warnings').style.display = 'none';
     }
-
-    /* ============ Ковёр ============ */
-    var MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-    var tips = [];
 
     function renderCarpet() {
       tips = [];
@@ -580,21 +596,19 @@
       function label(w, y) {
         var badges = '';
         if (w.type) badges += '<tspan fill="var(--muted)">' + esc(w.type) + '</tspan>';
-        if (w.purpose) badges += '<tspan class="pp" dx="6" fill="' + (w.purpose === 'доб' ? '#047857' : '#2563eb') + '">' + esc(w.purpose) + '</tspan>';
+        if (w.purpose) badges += '<tspan dx="6" fill="' + (w.purpose === 'доб' ? '#047857' : '#2563eb') + '">' + esc(w.purpose) + '</tspan>';
         var rig = w.rig || '';
-        if (rig.length > 26) rig = rig.slice(0, 25) + '…';
-        var out = '<text x="' + (L - 10) + '" y="' + (y + 17) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text)">№ ' + esc(w.n) +
+        if (rig.length > 24) rig = rig.slice(0, 23) + '…';
+        return '<text x="' + (L - 10) + '" y="' + (y + 17) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text)">№ ' + esc(w.n) +
           ' <tspan font-size="11" font-weight="400">' + badges + '</tspan></text>' +
           '<text x="' + (L - 10) + '" y="' + (y + 32) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + esc(rig) +
-          (w.crew != null && w.crew !== '' ? ' · бр. ' + esc(w.crew) : '') + '</text>';
-        return out;
+          (w.crew ? ' · бр. ' + esc(w.crew) : '') + '</text>';
       }
-      function barTip(w, ph, sec) {
-        return esc('№ ' + w.n + (sec ? ' · ' + sec : '')) + '<br><span class="m">' + esc(w.type + (w.purpose ? ' / ' + w.purpose : '') + (w.rig ? ' · ' + w.rig : '')) + '</span>';
+      function barTip(w, ph) {
+        return esc('№ ' + w.n + ' · ' + ph) + '<br><span class="m">' + esc(w.type + (w.purpose ? ' / ' + w.purpose : '') + (w.rig ? ' · ' + w.rig : '') + (w.crew ? ' · бр. ' + w.crew : '')) + '</span>';
       }
 
       if (S.mode === 'cal') {
-        // ---- календарь ----
         var t0 = null, t1 = null;
         wells.forEach(function (w) {
           for (var k in w.ph) {
@@ -607,51 +621,35 @@
           if (b) { var y = t(b); if (t1 == null || y > t1) t1 = y; if (t0 == null || y < t0) t0 = y; }
         }
         if (t0 == null) {
-          $('chartCard').innerHTML = '<div class="empty">В этом кусте нет дат — включите режим «Циклы (по суткам)».</div>';
+          $('chartCard').innerHTML = '<div class="empty">В этом кусте нет дат — включите режим «Циклы (сутки)».</div>';
           renderLegend(null);
           return;
         }
-        t0 -= 3 * 86400000; t1 += 3 * 86400000;
-        var DAY = 86400000;
-        function X(ms) { return L + (ms - t0) / (t1 - t0) * iw; }
-
-        // года и месяцы
-        var d = new Date(t0); var cur = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-        var y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)).getTime();
-        svg += '<rect x="' + X(y0) + '" y="0" width="' + Math.max(0, X(new Date(Date.UTC(d.getUTCFullYear() + 1, 0, 1)).getTime()) - X(y0)) + '" height="' + yearH + '" fill="var(--border)" opacity="0.55" rx="3"/>';
-        svg += '<text x="' + (X(y0) + 8) + '" y="14" font-size="12" font-weight="700" fill="var(--text)">' + d.getUTCFullYear() + '</text>';
+        t0 -= 3 * DAY; t1 += 3 * DAY;
+        var X = function (ms) { return L + (ms - t0) / (t1 - t0) * iw; };
+        var d = new Date(t0), cur = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+        svg += '<text x="' + (L + 4) + '" y="14" font-size="12" font-weight="700" fill="var(--text)">' + d.getUTCFullYear() + '</text>';
         while (cur.getTime() <= t1) {
-          var mStart = cur.getTime();
-          var mEnd = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1)).getTime();
-          var wpx = X(Math.min(mEnd, t1)) - X(mStart);
-          if (cur.getUTCMonth() % 2 === 0)
-            svg += '<rect x="' + X(mStart) + '" y="' + yearH + '" width="' + wpx + '" height="' + monthH + '" fill="var(--border)" opacity="0.35"/>';
-          if (wpx > 16)
-            svg += '<text x="' + (X(mStart) + 3) + '" y="' + (yearH + 13) + '" font-size="10" fill="var(--muted)">' + MONTHS[cur.getUTCMonth()] + '</text>';
-          if (cur.getUTCMonth() === 0) {
-            var yy = cur.getUTCFullYear();
-            svg += '<text x="' + (X(mStart) + 4) + '" y="14" font-size="12" font-weight="700" fill="var(--muted)">' + yy + '</text>';
-          }
-          svg += '<line x1="' + X(mStart) + '" y1="' + yearH + '" x2="' + X(mStart) + '" y2="' + (H - 10) + '" stroke="var(--border)" stroke-width="1" opacity="0.7"/>';
-          cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+          var mStart = cur.getTime(), mEnd = Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1);
+          var x0 = Math.max(L, X(mStart)), wpx = X(Math.min(mEnd, t1)) - x0;
+          if (cur.getUTCMonth() % 2 === 0) svg += '<rect x="' + x0 + '" y="' + yearH + '" width="' + Math.max(0, wpx) + '" height="' + monthH + '" fill="var(--border)" opacity="0.35"/>';
+          if (wpx > 16) svg += '<text x="' + (x0 + 3) + '" y="' + (yearH + 13) + '" font-size="10" fill="var(--muted)">' + MONTHS[cur.getUTCMonth()] + '</text>';
+          if (cur.getUTCMonth() === 0 && X(mStart) > L + 30) svg += '<text x="' + (X(mStart) + 4) + '" y="14" font-size="12" font-weight="700" fill="var(--muted)">' + cur.getUTCFullYear() + '</text>';
+          if (X(mStart) >= L) svg += '<line x1="' + X(mStart) + '" y1="' + yearH + '" x2="' + X(mStart) + '" y2="' + (H - 10) + '" stroke="var(--border)" stroke-width="1" opacity="0.7"/>';
+          cur = new Date(mEnd);
         }
         svg += '<line x1="' + L + '" y1="' + T + '" x2="' + (W - Rm) + '" y2="' + T + '" stroke="var(--border)"/>';
-
-        // строки скважин
         wells.forEach(function (w, i) {
           var y = T + i * rowH;
           if (i % 2) svg += '<rect x="' + L + '" y="' + y + '" width="' + iw + '" height="' + rowH + '" fill="var(--border)" opacity="0.18"/>';
           svg += label(w, y);
           var barY = y + 8, barH = 20;
           PHASES.forEach(function (ph) {
-            if (ph.k === 'drill' && S.sections && w.ph.sections && w.ph.sections.length) return; // заменяется секциями
+            if (ph.k === 'drill' && S.sections && w.ph.sections && w.ph.sections.length) return;
             var rec = w.ph[ph.k];
-            if (!rec || S.hidden[ph.k]) return;
-            if (!rec.s && !rec.e) return;
-            var s = rec.s ? t(rec.s) : null, e = rec.e ? t(rec.e) : null;
-            if (s == null && e != null && rec.d) s = e - rec.d * DAY;
-            if (e == null && s != null && rec.d) e = s + rec.d * DAY;
-            if (s == null || e == null || e < s) return;
+            if (!rec || S.hidden[ph.k] || !rec.s || !rec.e) return;
+            var s = t(rec.s), e = t(rec.e);
+            if (e < s) return;
             var x1 = X(s), x2 = X(e), bw = Math.max(x2 - x1, 1.5);
             tips.push({ x: x1, w: bw, y: barY, h: barH, html: barTip(w, ph.label) + phaseDetails(rec) });
             svg += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + bw.toFixed(1) + '" height="' + barH + '" rx="3" fill="' + ph.color + '" stroke="rgba(0,0,0,.28)"/>';
@@ -665,27 +663,18 @@
               svg += '<text x="' + (x2 - 3) + '" y="' + (barY + barH + 10) + '" text-anchor="end" font-size="9" fill="var(--muted)">' + ruDate(rec.e) + '</text>';
             }
           });
-          // секции бурения
           if (S.sections && w.ph.sections && w.ph.sections.length && !S.hidden.drill) {
             var sh = barH / w.ph.sections.length;
             w.ph.sections.forEach(function (srec, si2) {
-              if (!srec.s && !srec.e) return;
-              var s = srec.s ? t(srec.s) : null, e = srec.e ? t(srec.e) : null;
-              if (s == null && e != null && srec.d) s = e - srec.d * DAY;
-              if (e == null && s != null && srec.d) e = s + srec.d * DAY;
-              if (s == null || e == null || e < s) return;
+              if (!srec.s || !srec.e) return;
+              var s = t(srec.s), e = t(srec.e);
+              if (e < s) return;
               var x1 = X(s), bw = Math.max(X(e) - x1, 1.5);
               var col = ['#6ee7b7', '#34d399', '#10b981', '#059669', '#047857'][Math.min(si2, 4)];
               tips.push({ x: x1, w: bw, y: barY + si2 * sh, h: sh, html: barTip(w, 'Бурение · ' + (SECTION_LABEL[srec.k] || srec.k)) + phaseDetails(srec) });
               svg += '<rect x="' + x1.toFixed(1) + '" y="' + (barY + si2 * sh) + '" width="' + bw.toFixed(1) + '" height="' + sh + '" fill="' + col + '" stroke="rgba(0,0,0,.25)"/>';
             });
-            var dr = w.ph.drill;
-            var os = dr && dr.s ? dr.s : w.ph.sections[0].s;
-            var oe = dr && dr.e ? dr.e : w.ph.sections[w.ph.sections.length - 1].e;
-            if (os && oe && t(oe) >= t(os))
-              svg += '<rect x="' + X(t(os)).toFixed(1) + '" y="' + barY + '" width="' + Math.max(1.5, X(t(oe)) - X(t(os))).toFixed(1) + '" height="' + barH + '" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1.2" rx="3"/>';
           }
-          // маркер ввода
           var inp = w.ph.input;
           if (inp && (inp.e || inp.s) && !S.hidden.input) {
             var ix = X(t(inp.e || inp.s));
@@ -695,7 +684,6 @@
           }
         });
       } else {
-        // ---- циклы (накопленные сутки) ----
         var acc = 0, maxD = 0;
         var rows = wells.map(function (w) {
           var dd = w.dd != null ? w.dd : (w.bd != null ? w.bd : 0);
@@ -705,12 +693,11 @@
           maxD = Math.max(maxD, row.d2);
           return row;
         });
-        var STEP = 30;
-        var end = Math.ceil((maxD + 5) / STEP) * STEP;
-        function X(d) { return L + d / end * iw; }
-        for (var g = 0; g <= end; g += STEP) {
-          svg += '<line x1="' + X(g) + '" y1="' + yearH + '" x2="' + X(g) + '" y2="' + (H - 10) + '" stroke="var(--border)" opacity="0.8"/>';
-          svg += '<text x="' + X(g) + '" y="' + (yearH + 13) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + g + '</text>';
+        var STEP = 30, end = Math.ceil((maxD + 5) / STEP) * STEP || STEP;
+        var Xc = function (dd) { return L + dd / end * iw; };
+        for (var gg = 0; gg <= end; gg += STEP) {
+          svg += '<line x1="' + Xc(gg) + '" y1="' + yearH + '" x2="' + Xc(gg) + '" y2="' + (H - 10) + '" stroke="var(--border)" opacity="0.8"/>';
+          svg += '<text x="' + Xc(gg) + '" y="' + (yearH + 13) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + gg + '</text>';
         }
         svg += '<text x="' + (L + iw) + '" y="14" text-anchor="end" font-size="11" font-weight="700" fill="var(--muted)">сутки от начала бурения куста</text>';
         svg += '<line x1="' + L + '" y1="' + T + '" x2="' + (W - Rm) + '" y2="' + T + '" stroke="var(--border)"/>';
@@ -718,8 +705,7 @@
           var y = T + i * rowH;
           if (i % 2) svg += '<rect x="' + L + '" y="' + y + '" width="' + iw + '" height="' + rowH + '" fill="var(--border)" opacity="0.18"/>';
           svg += label(row.w, y);
-          var barY = y + 8, barH = 20;
-          var x1 = X(row.s), x2 = X(row.d1), x3 = X(row.d2);
+          var barY = y + 8, barH = 20, x1 = Xc(row.s), x2 = Xc(row.d1), x3 = Xc(row.d2);
           if (x3 - x1 >= 1) {
             svg += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + (x3 - x1).toFixed(1) + '" height="' + barH + '" rx="3" fill="var(--ph-build)" opacity="0.55" stroke="rgba(0,0,0,.2)"/>';
             tips.push({ x: x1, w: x3 - x1, y: barY, h: barH, html: barTip(row.w, 'Цикл строительства') + '<br><span class="m">' + fmt1(row.d2 - row.s) + ' сут</span>' });
@@ -727,14 +713,13 @@
           if (x2 - x1 >= 1) {
             svg += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + (x2 - x1).toFixed(1) + '" height="' + barH + '" rx="3" fill="var(--ph-drill)" stroke="rgba(0,0,0,.28)"/>';
             tips.push({ x: x1, w: x2 - x1, y: barY, h: barH, html: barTip(row.w, 'Цикл бурения') + '<br><span class="m">' + fmt1(row.d1 - row.s) + ' сут</span>' });
-            if (x2 - x1 >= 34)
-              svg += '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (barY + 14) + '" text-anchor="middle" font-size="10.5" font-weight="600" fill="#fff">' + fmt1(row.d1 - row.s) + '</text>';
+            if (x2 - x1 >= 34) svg += '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (barY + 14) + '" text-anchor="middle" font-size="10.5" font-weight="600" fill="#fff">' + fmt1(row.d1 - row.s) + '</text>';
           }
         });
       }
-
       svg += '</svg>';
       $('chartCard').innerHTML = svg;
+      S.lastRig = null;
       renderLegend(wells);
       wireTips();
     }
@@ -746,331 +731,33 @@
       if (rec.dist) parts.push(rec.dist + ' м');
       return parts.length ? '<br><span class="m">' + esc(parts.join(' · ')) + '</span>' : '';
     }
-
     function renderLegend(wells) {
       var items = [];
       if (S.mode === 'cal') {
         PHASES.concat([{ k: 'input', label: 'Ввод в эксплуатацию', color: '#047857' }]).forEach(function (ph) {
           var total = 0, cnt = 0;
-          if (wells) wells.forEach(function (w) {
-            var recs = ph.k === 'input' ? [w.ph.input] : [w.ph[ph.k]];
-            recs.forEach(function (r) { if (r && (r.d != null)) { total += r.d; cnt++; } });
-          });
+          if (wells) wells.forEach(function (w) { var r = w.ph[ph.k]; if (r && r.d != null) { total += r.d; cnt++; } });
           items.push('<button type="button" data-ph="' + ph.k + '" class="' + (S.hidden[ph.k] ? 'off' : '') + '">' +
-            '<i class="sw" style="background:' + ph.color + '"></i>' + ph.label +
-            (cnt ? ' · <b>' + fmtInt.format(Math.round(total)) + ' дн</b>' : '') + '</button>');
+            '<i class="sw" style="background:' + ph.color + '"></i>' + ph.label + (cnt ? ' · <b>' + fmtInt.format(Math.round(total)) + ' дн</b>' : '') + '</button>');
         });
       } else {
-        items = [
-          '<span><i class="sw" style="background:var(--ph-drill)"></i>цикл бурения</span>',
-          '<span><i class="sw" style="background:var(--ph-build)"></i>остальной цикл строительства</span>'
-        ];
+        items = ['<span><i class="sw" style="background:var(--ph-drill)"></i>цикл бурения</span>',
+          '<span><i class="sw" style="background:var(--ph-build)"></i>остальной цикл строительства</span>'];
       }
       $('legend').innerHTML = items.join('');
       Array.prototype.forEach.call($('legend').querySelectorAll('button[data-ph]'), function (b) {
-        b.addEventListener('click', function () {
-          var k = this.getAttribute('data-ph');
-          S.hidden[k] = !S.hidden[k];
-          renderCarpet();
-          renderSummary();
-        });
+        b.addEventListener('click', function () { var k = this.getAttribute('data-ph'); S.hidden[k] = !S.hidden[k]; renderCarpet(); });
       });
     }
 
-    /* ============ Режим «По установкам» (ГДБУ): порядок бурения кустов ============ */
-    function isoAdd(iso, days) {
-      return new Date(t(iso) + days * 86400000).toISOString().slice(0, 10);
-    }
-    function drillEnd(w) {
-      var r = w.ph.drill;
-      if (!r) return null;
-      if (r.e) return r.e;
-      if (r.s && r.d) return isoAdd(r.s, Math.round(r.d));
-      return r.s;
-    }
-    function ruShort(iso) { if (!iso) return ''; var p = iso.split('-'); return p[2] + '.' + p[1] + '.' + p[0].slice(2); }
-
-    function buildRigs() {
-      var wells = [];
-      S.pads.forEach(function (p) { wells = wells.concat(p.wells); });
-      var by = {}, keys = [], undated = 0;
-      wells.forEach(function (w) {
-        if (!(w.ph.drill && w.ph.drill.s)) { undated++; return; }
-        var key = w.rig || 'БУ не указана';
-        if (w.crew != null && w.crew !== '') key += ' · бр. ' + w.crew;
-        if (!by[key]) { by[key] = { rig: w.rig || 'БУ не указана', crew: w.crew, wells: [] }; keys.push(key); }
-        by[key].wells.push(w);
-      });
-      var rigs = keys.map(function (key) {
-        var g = by[key];
-        var ws = g.wells.slice().sort(function (a, b) { return t(a.ph.drill.s) - t(b.ph.drill.s); });
-        // кампании: последовательные скважины одной установки на одном кусте
-        var camps = [];
-        ws.forEach(function (w) {
-          var de = drillEnd(w);
-          var ms = w.ph.mount && w.ph.mount.s;
-          var last = camps[camps.length - 1];
-          if (last && last.pad === w.pad) {
-            last.wells.push(w);
-            if (de && t(de) > t(last.e)) last.e = de;
-          } else {
-            camps.push({ pad: w.pad, wells: [w], s: ms || w.ph.drill.s, e: de || w.ph.drill.s });
-          }
-        });
-        // переходные фазы со своими датами: демонтаж, стаскивание, передвижка
-        var trans = [];
-        ws.forEach(function (w) {
-          ['demount', 'skid', 'move'].forEach(function (k) {
-            var r = w.ph[k];
-            if (!r) return;
-            var a = r.s ? t(r.s) : null, b = r.e ? t(r.e) : null;
-            if (a == null && b == null) return;
-            if (a == null) a = b;
-            if (b == null) b = a;
-            if (b < a) { var q = a; a = b; b = q; }
-            trans.push({ k: k, a: a, b: b, w: w });
-          });
-        });
-        return { rig: g.rig, crew: g.crew, camps: camps, trans: trans };
-      }).filter(function (r) { return r.camps.length; });
-      rigs.sort(function (a, b) { return t(a.camps[0].s) - t(b.camps[0].s); });
-      rigs.undated = undated;
-      return rigs;
-    }
-
-    function renderRigSummary() {
-      var rigs = buildRigs();
-      var padsSet = {}, wellN = 0, dd = 0, t0 = null, t1 = null;
-      rigs.forEach(function (r) {
-        r.camps.forEach(function (c) {
-          padsSet[c.pad] = 1;
-          c.wells.forEach(function (w) { wellN++; dd += w.dd || 0; });
-          var a = t(c.s), b = t(c.e);
-          if (t0 == null || a < t0) t0 = a;
-          if (t1 == null || b > t1) t1 = b;
-        });
-      });
-      var span = (t0 != null && t1 != null) ? Math.round((t1 - t0) / 86400000) : 0;
-      var cards = [
-        k2(rigs.length, 'буровых установок (с датами бурения)'),
-        k2(Object.keys(padsSet).length, 'кустов в графике'),
-        k2(wellN, 'скважин' + (rigs.undated ? ' · ещё ' + rigs.undated + ' без дат не показаны' : '')),
-        dd ? k2(fmtInt.format(Math.round(dd)) + ' сут', 'суммарный цикл бурения') : null,
-        span ? k2(fmtInt.format(span) + ' дн', 'охват графика (' + ruShort(new Date(t0).toISOString().slice(0, 10)) + ' — ' + ruShort(new Date(t1).toISOString().slice(0, 10)) + ')') : null
-      ];
-      $('sumCards').innerHTML = cards.filter(Boolean).join('');
-      function k2(v, l) { return '<div class="kcard"><div class="num">' + v + '</div><div class="lab">' + l + '</div></div>'; }
-    }
-
-    function renderRigChart() {
-      tips = [];
-      var rigs = buildRigs();
-      if (!rigs.length) {
-        $('chartCard').innerHTML = '<div class="empty">Нет скважин с датами бурения — режим «По установкам» недоступен для этого файла.</div>';
-        $('legend').innerHTML = '';
-        return;
-      }
-      var W = 1180, L = 258, Rm = 16, yearH = 22, monthH = 18, rowH = 76;
-      var DAY = 86400000;
-      function isoOf(ms) { return new Date(ms).toISOString().slice(0, 10); }
-      var full0 = null, full1 = null;
-      function touch(v) { if (v == null) return; if (full0 == null || v < full0) full0 = v; if (full1 == null || v > full1) full1 = v; }
-      rigs.forEach(function (r) {
-        r.camps.forEach(function (c) { touch(t(c.s)); touch(t(c.e)); });
-      });
-      full0 -= 5 * DAY; full1 += 5 * DAY;
-      window.__fullSpan = full1 - full0;
-      // по умолчанию — весь период работ, все установки; зум и сдвиг — вручную
-      if (!S.rigRange) S.rigRange = { a: full0, b: full1 };
-      var t0 = Math.max(S.rigRange.a, full0), t1 = Math.min(S.rigRange.b, full1);
-      if (t1 - t0 < 20 * DAY) t1 = t0 + 20 * DAY;
-      var zoomed = (t1 - t0) < (full1 - full0) - DAY;
-      // в окне показываем только установки, у которых есть кампании в этом периоде
-      var visRigs = rigs.filter(function (r) {
-        return r.camps.some(function (c) { var a = t(c.s), b = t(c.e); return b >= t0 && a <= t1; });
-      });
-      var hiddenRigs = rigs.length - visRigs.length;
-      var T = yearH + monthH + 8, H = T + visRigs.length * rowH + 14, iw = W - L - Rm;
-      function X(v) { return L + (v - t0) / (t1 - t0) * iw; }
-
-      var svg = '<svg id="carpetSvg" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit">';
-      svg += '<defs><clipPath id="plotClip"><rect x="' + L + '" y="0" width="' + iw + '" height="' + H + '"/></clipPath></defs>';
-
-      // ось: года и месяцы
-      var d0 = new Date(t0);
-      var cur = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), 1));
-      while (cur.getTime() <= t1) {
-        var mStart = cur.getTime();
-        var mEnd = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1)).getTime();
-        var wpx = X(Math.min(mEnd, t1)) - X(mStart);
-        if (cur.getUTCMonth() % 2 === 0)
-          svg += '<rect x="' + X(mStart).toFixed(1) + '" y="' + yearH + '" width="' + Math.max(0, wpx).toFixed(1) + '" height="' + monthH + '" fill="var(--border)" opacity="0.35"/>';
-        if (wpx > 16)
-          svg += '<text x="' + (X(mStart) + 3).toFixed(1) + '" y="' + (yearH + 13) + '" font-size="10" fill="var(--muted)">' + MONTHS[cur.getUTCMonth()] + '</text>';
-        if (cur.getUTCMonth() === 0)
-          svg += '<text x="' + (X(mStart) + 4).toFixed(1) + '" y="15" font-size="12.5" font-weight="700" fill="var(--muted)">' + cur.getUTCFullYear() + '</text>';
-        var strong = cur.getUTCMonth() === 0;
-        svg += '<line x1="' + X(mStart).toFixed(1) + '" y1="' + yearH + '" x2="' + X(mStart).toFixed(1) + '" y2="' + (H - 10) + '" stroke="var(--border)" stroke-width="' + (strong ? 1.6 : 1) + '" opacity="' + (strong ? 1 : 0.7) + '"/>';
-        cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
-      }
-      svg += '<line x1="' + L + '" y1="' + T + '" x2="' + (W - Rm) + '" y2="' + T + '" stroke="var(--border)"/>';
-
-      visRigs.forEach(function (r, i) {
-        var y = T + i * rowH;
-        if (i % 2) svg += '<rect x="' + L + '" y="' + y + '" width="' + iw + '" height="' + rowH + '" fill="var(--border)" opacity="0.22"/>';
-        var rigName = r.rig.length > 30 ? r.rig.slice(0, 29) + '…' : r.rig;
-        var wellsN = r.camps.reduce(function (a, c) { return a + c.wells.length; }, 0);
-        svg += '<text x="' + (L - 10) + '" y="' + (y + 26) + '" text-anchor="end" font-size="14" font-weight="700" fill="var(--text)">' + esc(rigName) + '</text>' +
-          '<text x="' + (L - 10) + '" y="' + (y + 45) + '" text-anchor="end" font-size="11.5" fill="var(--muted)">' +
-          (r.crew != null && r.crew !== '' ? 'бригада ' + esc(r.crew) + ' · ' : '') + r.camps.length + ' куст(а) · ' + wellsN + ' скв.</text>';
-
-        var barY = y + 34, barH = 26;
-        svg += '<g clip-path="url(#plotClip)">';
-
-        // ВМР между кампаниями: всё, что между кустами — демонтаж, переезд, монтаж, ремонт
-        r.camps.forEach(function (c, ci) {
-          if (ci + 1 >= r.camps.length) return;
-          var a = t(c.e), b = t(r.camps[ci + 1].s);
-          if (b - a < 2 * DAY) return;
-          var x1 = X(a), bw = Math.max(X(b) - x1, 2);
-          tips.push({
-            x: x1, w: bw, y: barY, h: barH,
-            html: '<b>' + esc(r.rig) + (r.crew ? ' · бр. ' + esc(r.crew) : '') + '</b><br>ВМР: КП №' + esc(c.pad) + ' → КП №' + esc(r.camps[ci + 1].pad) +
-              '<br><span class="m">' + ruDate(isoOf(a)) + ' → ' + ruDate(isoOf(b)) + ' · ' + fmtInt.format(Math.round((b - a) / DAY)) +
-              ' дн — демонтаж, переезд, монтаж, вспомогательные работы и ремонт БУ</span>'
-          });
-          svg += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + bw.toFixed(1) + '" height="' + barH + '" rx="4" fill="var(--ph-vmr)" opacity="0.85" stroke="rgba(0,0,0,.22)"/>';
-          if (bw >= 34)
-            svg += '<text x="' + (x1 + bw / 2).toFixed(1) + '" y="' + (barY + 17) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">ВМР</text>';
-        });
-        // кампании бурения кустов; подпись «КП №N (скв)» — каждой: внутри, над баром, под баром или наклонно
-        var lastLabelEnd = -Infinity, lastBelowEnd = -Infinity, prevDateCenter = -Infinity, lastDiagEnd = -Infinity;
-        r.camps.forEach(function (c, ci) {
-          var a = t(c.s), b = t(c.e);
-          var x1 = X(a), x2 = X(b), bw = Math.max(x2 - x1, 2.5);
-          var nextX1 = ci + 1 < r.camps.length ? X(t(r.camps[ci + 1].s)) : W - Rm;
-          var dd = 0, names = [];
-          c.wells.forEach(function (w) { dd += w.dd || 0; names.push(w.n); });
-          var tip = '<b>' + esc(r.rig) + (r.crew ? ' · бр. ' + esc(r.crew) : '') + '</b><br>КП №<b>' + esc(c.pad) + '</b> · ' + c.wells.length + ' скв. (' + esc(names.slice(0, 8).join(', ')) + (names.length > 8 ? '…' : '') + ')' +
-            '<br><span class="m">' + ruDate(c.s) + ' → ' + ruDate(c.e) + ' · ' + fmtInt.format(Math.round((b - a) / DAY)) + ' дн' +
-            (dd ? ' · бурение ' + fmtInt.format(Math.round(dd)) + ' сут' : '') + '</span>';
-          tips.push({ x: x1, w: bw, y: barY, h: barH, html: tip });
-          svg += '<rect x="' + x1.toFixed(1) + '" y="' + barY + '" width="' + bw.toFixed(1) + '" height="' + barH + '" rx="4" fill="var(--ph-drill)" stroke="rgba(0,0,0,.3)"/>';
-          var label = 'КП №' + c.pad + ' (' + c.wells.length + ')';
-          var lw = label.length * 6.0;
-          var lim = W - Rm - 2;
-          var lane = null;
-          if (bw >= label.length * 6.2 + 8) {
-            svg += '<text x="' + ((x1 + x2) / 2).toFixed(1) + '" y="' + (barY + 17) + '" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">' + esc(label) + '</text>';
-            lane = 'in';
-          } else {
-            // подписи цепочкой, как текст в объединённых ячейках Excel:
-            // могут течь вправо поверх соседних блоков, смещение — не более 260px от своего бара
-            var la = Math.max(x1 + 1, L + 1, Math.max(lastLabelEnd, lastDiagEnd) + 5);
-            if (la + lw < lim && la < x1 + 480) {
-              svg += '<text x="' + la.toFixed(1) + '" y="' + (barY - 4) + '" font-size="10.5" font-weight="600" fill="var(--text)" style="paint-order:stroke;stroke:var(--card);stroke-width:3px">' + esc(label) + '</text>';
-              lastLabelEnd = la + lw;
-              lane = 'above';
-            } else {
-              var lb = Math.max(x1 + 1, L + 1, lastBelowEnd + 5);
-              if (lb + lw < lim && lb < x1 + 480) {
-                svg += '<text x="' + lb.toFixed(1) + '" y="' + (barY + barH + 12) + '" font-size="10" font-weight="600" fill="var(--text)" style="paint-order:stroke;stroke:var(--card);stroke-width:3px">' + esc(label) + '</text>';
-                lastBelowEnd = lb + lw;
-                prevDateCenter = Math.max(prevDateCenter, lb + lw);
-                lane = 'below';
-              }
-            }
-          }
-          if (!lane) {
-            // совсем тесно: крутая (почти вертикальная) подпись номера КП — ставится всегда
-            var padC = String(c.pad).replace(/\s+/g, '');
-            var dl = padC.length > 6 ? padC.slice(0, 6) : padC;
-            var dx = Math.max(x1 + 1, L + 1, lastDiagEnd + 11, lastLabelEnd + 3);
-            if (dx >= W - Rm - 8) dx = Math.max(x1 + 1, W - Rm - 10 - dl.length * 3.2);
-            if (dx < W - Rm - 8) {
-              svg += '<text x="' + dx.toFixed(1) + '" y="' + (barY - 1) + '" font-size="9.5" font-weight="600" fill="var(--text)" style="paint-order:stroke;stroke:var(--card);stroke-width:3px" transform="rotate(-62 ' + dx.toFixed(1) + ' ' + (barY - 1) + ')">' + esc(dl) + '</text>';
-              lastDiagEnd = dx + dl.length * 3.0;
-            }
-          }
-          var ctr = (x1 + x2) / 2;
-          var dcx = Math.max(L + 62, Math.min(ctr, W - Rm - 62));
-          if (lane !== 'below' && bw >= 58 && dcx - prevDateCenter > 118 && nextX1 - ctr > 62) {
-            svg += '<text x="' + dcx.toFixed(1) + '" y="' + (barY + barH + 12) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' +
-              ruShort(c.s) + ' → ' + ruShort(c.e) + ' · ' + fmtInt.format(Math.round((b - a) / DAY)) + ' дн</text>';
-            prevDateCenter = dcx;
-          }
-        });
-        svg += '</g>';
-      });
-
-      svg += '</svg>';
-      $('chartCard').innerHTML = svg;
-      $('legend').innerHTML =
-        (zoomed ? '<button type="button" class="btn2" id="zoomReset" style="font-size:12.5px;padding:3px 10px;margin-right:8px;">⟲ весь срок</button>' : '') +
-        '<span><i class="sw" style="background:var(--ph-drill)"></i>кампания бурения КП</span>' +
-        '<span><i class="sw" style="background:var(--ph-vmr)"></i>ВМР между кампаниями (демонтаж · переезд · монтаж · ремонт)</span>' +
-        '<span><i class="sw" style="background:transparent;border:1px dashed var(--muted)"></i>вне работы / нет данных</span>' +
-        (hiddenRigs > 0 ? '<span style="color:var(--muted);font-size:12.5px;">за окном скрыто БУ: ' + hiddenRigs + ' (без работ в показанном периоде)</span>' : '') +
-        '<span style="color:var(--muted);font-size:12.5px;">колёсико — масштаб · перетаскивание — сдвиг по времени · наведите курсор на любой блок</span>';
-      var zr = $('zoomReset');
-      if (zr) zr.addEventListener('click', function () { S.rigRange = null; renderRigChart(); });
-      wireZoom();
-      wireTips();
-    }
-
-    // зум колёсиком и панорамирование мышью (навешивается один раз на контейнер)
-    var zoomWired = false;
-    function wireZoom() {
-      if (zoomWired) return;
-      zoomWired = true;
-      var card = $('chartCard');
-      var ZL = 258, ZIW = 1180 - 258 - 16;
-      card.addEventListener('wheel', function (e) {
-        if (S.mode !== 'rig' || !S.rigRange) return;
-        e.preventDefault();
-        var el = document.getElementById('carpetSvg');
-        if (!el) return;
-        var r = el.getBoundingClientRect();
-        var xIn = (e.clientX - r.left) * (1180 / r.width);
-        var span = S.rigRange.b - S.rigRange.a;
-        var frac = Math.min(1, Math.max(0, (xIn - ZL) / ZIW));
-        var anchor = S.rigRange.a + frac * span;
-        var ns = Math.min(Math.max(span * (e.deltaY > 0 ? 1.18 : 1 / 1.18), 25 * 86400000), window.__fullSpan || span);
-        var rel = (anchor - S.rigRange.a) / span;
-        S.rigRange = { a: anchor - rel * ns, b: anchor - rel * ns + ns };
-        renderRigChart();
-      }, { passive: false });
-      var drag = null;
-      card.addEventListener('mousedown', function (e) {
-        if (S.mode !== 'rig' || !S.rigRange) return;
-        drag = { x: e.clientX, a: S.rigRange.a, b: S.rigRange.b };
-        card.style.cursor = 'grabbing';
-        e.preventDefault();
-      });
-      window.addEventListener('mousemove', function (e) {
-        if (!drag) return;
-        var el = document.getElementById('carpetSvg');
-        if (!el) { drag = null; return; }
-        var r = el.getBoundingClientRect();
-        var dDays = -(e.clientX - drag.x) * (1180 / r.width) / ZIW * (drag.b - drag.a);
-        S.rigRange = { a: drag.a + dDays, b: drag.b + dDays };
-        if (!wireZoom._raf) {
-          wireZoom._raf = requestAnimationFrame(function () { wireZoom._raf = 0; renderRigChart(); });
-        }
-      });
-      window.addEventListener('mouseup', function () { drag = null; card.style.cursor = ''; });
-    }
-
-    /* ============ Тултипы ============ */
+    /* ============ Подсказки ============ */
     function wireTips() {
-      var tip = $('tip');
-      var svg = document.getElementById('carpetSvg');
+      var tip = $('tip'), svg = document.getElementById('carpetSvg');
       if (!svg) return;
       function find(ev) {
-        var r = svg.getBoundingClientRect();
-        var x = (ev.clientX - r.left) * (1180 / r.width);
-        var y = (ev.clientY - r.top) * (svg.viewBox.baseVal.height / r.height);
-        for (var i = 0; i < tips.length; i++) {
+        var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+        var x = (ev.clientX - r.left) * (vb.width / r.width), y = (ev.clientY - r.top) * (vb.height / r.height);
+        for (var i = tips.length - 1; i >= 0; i--) {
           var b = tips[i];
           if (x >= b.x - 2 && x <= b.x + b.w + 2 && y >= b.y - 2 && y <= b.y + b.h + 2) return b;
         }
@@ -1084,49 +771,59 @@
         var tx = ev.clientX + 16, ty = ev.clientY + 14;
         if (tx + tip.offsetWidth > window.innerWidth - 8) tx = ev.clientX - tip.offsetWidth - 12;
         if (ty + tip.offsetHeight > window.innerHeight - 8) ty = ev.clientY - tip.offsetHeight - 10;
-        tip.style.left = tx + 'px';
-        tip.style.top = ty + 'px';
+        tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
       });
       svg.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
     }
 
-    /* ============ Экспорт PNG ============ */
-    function exportPNG() {
-      var svg = document.getElementById('carpetSvg');
-      if (!svg) return;
-      var clone = svg.cloneNode(true);
-      // заменяем var(--…) на вычисленные значения, иначе в standalone-картинке их нет
-      var orig = svg.querySelectorAll('*');
-      var cl = clone.querySelectorAll('*');
+    /* ============ PNG ============ */
+    function inlineVars(svgEl) {
+      var clone = svgEl.cloneNode(true), orig = svgEl.querySelectorAll('*'), cl = clone.querySelectorAll('*');
+      var cs0 = getComputedStyle(svgEl);
+      function resolve(v, cs) {
+        return v.replace(/var\((--[\w-]+)\)/g, function (_, nm) { return cs.getPropertyValue(nm).trim() || cs0.getPropertyValue(nm).trim() || '#888'; });
+      }
       for (var i = 0; i < cl.length; i++) {
-        var src = orig[i] || svg, cs = getComputedStyle(src);
-        ['fill', 'stroke'].forEach(function (attr) {
+        var cs = getComputedStyle(orig[i] || svgEl);
+        ['fill', 'stroke', 'style'].forEach(function (attr) {
           var v = cl[i].getAttribute && cl[i].getAttribute(attr);
-          if (v && v.indexOf('var(') === 0) {
-            var nm = v.slice(4, -1).trim();
-            var cv = cs.getPropertyValue(nm).trim() || v;
-            cl[i].setAttribute(attr, cv);
-          }
+          if (v && v.indexOf('var(') >= 0) cl[i].setAttribute(attr, resolve(v, cs));
         });
       }
-      var csRoot = getComputedStyle(document.body);
-      clone.setAttribute('style', 'font-family:' + csRoot.fontFamily + ';background:' + csRoot.backgroundColor);
-      var xml = new XMLSerializer().serializeToString(clone);
-      var blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
-      var url = URL.createObjectURL(blob);
+      return clone;
+    }
+    function exportPNG() {
+      var bg = getComputedStyle(document.body).backgroundColor, ff = getComputedStyle(document.body).fontFamily;
+      var parts, W, H;
+      if (S.mode === 'rig' && S.lastRig) {
+        var svgs = document.querySelectorAll('#gdbu svg');
+        W = S.lastRig.LW + S.lastRig.CW; H = S.lastRig.H;
+        parts = [{ el: svgs[0], x: 0 }, { el: svgs[1], x: S.lastRig.LW }];
+      } else {
+        var one = document.getElementById('carpetSvg');
+        if (!one) return;
+        W = one.viewBox.baseVal.width; H = one.viewBox.baseVal.height;
+        parts = [{ el: one, x: 0 }];
+      }
+      var xml = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="font-family:' + esc(ff) + '">' +
+        '<rect width="100%" height="100%" fill="' + bg + '"/>' + parts.map(function (p) {
+          var c = inlineVars(p.el);
+          c.setAttribute('x', p.x); c.setAttribute('y', 0);
+          c.removeAttribute('class');
+          return new XMLSerializer().serializeToString(c);
+        }).join('') + '</svg>';
+      var url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
       var img = new Image();
       img.onload = function () {
-        var scale = 2;
+        var scale = Math.min(2, 16000 / W, 16000 / H);
         var cv = document.createElement('canvas');
-        cv.width = 1180 * scale;
-        cv.height = svg.viewBox.baseVal.height * scale;
+        cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
         var ctx = cv.getContext('2d');
-        ctx.fillStyle = csRoot.backgroundColor;
-        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
         ctx.drawImage(img, 0, 0, cv.width, cv.height);
         URL.revokeObjectURL(url);
         var a = document.createElement('a');
-        a.download = 'kovyor-bureniya-' + (pad() ? pad().name : 'kust') + '.png';
+        a.download = S.mode === 'rig' ? 'gdbu.png' : 'kovyor-' + (pad() ? pad().name : 'kust') + '.png';
         a.href = cv.toDataURL('image/png');
         a.click();
       };
@@ -1134,82 +831,102 @@
     }
 
     /* ============ Загрузка ============ */
-    function loadArrayBuffer(buf, fileName) {
-      try {
-        if (typeof XLSX === 'undefined') throw new Error('Парсер Excel (SheetJS) не загрузился — проверьте интернет и обновите страницу.');
-        var wb = XLSX.read(buf, { type: 'array', cellDates: true });
-        var pads = parseWorkbook(wb);
-        setData(pads, fileName || 'файл');
-      } catch (e) {
-        setStatus('Ошибка: ' + (e && e.message ? e.message : e), true);
+    function addParsed(f) {
+      var i = S.files.map(function (x) { return x.source; }).indexOf(f.source);
+      if (i >= 0) S.files[i] = f; else S.files.push(f);
+    }
+    function readWorkbook(buf, name) {
+      if (typeof XLSX === 'undefined') throw new Error('парсер Excel (SheetJS) не загрузился — проверьте интернет и обновите страницу');
+      var wb = XLSX.read(buf, { type: 'array', cellDates: true });
+      for (var i = 0; i < wb.SheetNames.length; i++) {
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], { header: 1, raw: true, defval: null, blankrows: true });
+        if (C.findHeader(rows) >= 0) return C.parseRows(rows, name);
       }
+      throw new Error('«' + name + '»: ни на одном листе нет строки заголовков с «Куст» и «Номер скважины»');
+    }
+    function loadFiles(list) {
+      var files = Array.prototype.slice.call(list || []);
+      if (!files.length) return;
+      var left = files.length, errs = [];
+      setStatus('Читаю ' + files.length + ' файл(а)…');
+      files.forEach(function (f) {
+        var rd = new FileReader();
+        rd.onload = function () {
+          try { addParsed(readWorkbook(rd.result, f.name.replace(/\.[^.]+$/, ''))); }
+          catch (e) { errs.push(e && e.message ? e.message : String(e)); }
+          if (--left === 0) {
+            S.padIdx = -1;
+            rebuild();
+            if (errs.length) setStatus('Ошибка: ' + errs.join('; '), true);
+          }
+        };
+        rd.readAsArrayBuffer(f);
+      });
     }
     function loadDemo() {
-      if (typeof DEMO_PADS === 'undefined') { setStatus('Демо-данные не загрузились', true); return; }
-      setData(JSON.parse(JSON.stringify(DEMO_PADS)), 'демо-данные Ванкора');
+      if (!window.DEMO_FILES) { setStatus('Демо-данные не загрузились', true); return; }
+      S.files = [];
+      window.DEMO_FILES.forEach(function (f) { addParsed(C.parseRows(f.rows, f.name)); });
+      S.padIdx = -1;
+      rebuild('Демо: графики бурения двух месторождений (' + fmtInt.format(S.files.reduce(function (a, f) { return a + f.wells.length; }, 0)) + ' скважин). Загрузите свои файлы — демо заменится.');
     }
 
+    var demoLoaded = false;
     $('pickBtn').addEventListener('click', function () { $('fileInput').click(); });
-    $('fileInput').addEventListener('change', function () {
-      var f = this.files[0];
-      if (!f) return;
-      var rd = new FileReader();
-      rd.onload = function () { loadArrayBuffer(rd.result, f.name); };
-      rd.readAsArrayBuffer(f);
-    });
-    $('demoBtn').addEventListener('click', loadDemo);
-
+    $('fileInput').addEventListener('change', function () { dropDemo(); loadFiles(this.files); this.value = ''; });
+    $('demoBtn').addEventListener('click', function () { loadDemo(); demoLoaded = true; });
+    $('clearBtn').addEventListener('click', function () { S.files = []; demoLoaded = false; rebuild('Файлы убраны.'); });
+    function dropDemo() { if (demoLoaded) { S.files = []; demoLoaded = false; } }   // свои файлы заменяют демо, а не смешиваются с ним
     var dz = $('dropzone');
-    ['dragenter', 'dragover'].forEach(function (ev) {
-      dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('drag'); });
-    });
-    ['dragleave', 'drop'].forEach(function (ev) {
-      dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('drag'); });
-    });
-    dz.addEventListener('drop', function (e) {
-      var f = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!f) return;
-      var rd = new FileReader();
-      rd.onload = function () { loadArrayBuffer(rd.result, f.name); };
-      rd.readAsArrayBuffer(f);
-    });
+    ['dragenter', 'dragover'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('drag'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('drag'); }); });
+    dz.addEventListener('drop', function (e) { dropDemo(); loadFiles(e.dataTransfer.files); });
 
     $('padSel').addEventListener('change', function () {
       S.padIdx = parseInt(this.value, 10);
-      $('optSections').disabled = !hasSections();
-      $('optSections').checked = false;
-      S.sections = false;
+      $('optSections').checked = false; S.sections = false;
       renderAll();
     });
     function setMode(m) {
       S.mode = m;
-      $('mode-rig').classList.toggle('on', m === 'rig');
-      $('mode-cal').classList.toggle('on', m === 'cal');
-      $('mode-cyc').classList.toggle('on', m === 'cyc');
-      var rigMode = m === 'rig';
-      $('padField').style.display = rigMode ? 'none' : '';
-      $('optDatesWrap').style.opacity = rigMode ? .4 : 1;
-      $('optDates').disabled = rigMode;
-      $('optSectionsWrap').style.opacity = rigMode ? .4 : 1;
-      $('optSections').disabled = rigMode;
+      ['rig', 'cal', 'cyc'].forEach(function (k) { $('mode-' + k).classList.toggle('on', m === k); });
+      var rig = m === 'rig';
+      $('padField').style.display = rig ? 'none' : '';
+      $('mwField').style.display = rig ? '' : 'none';
+      $('yearField').style.display = rig ? '' : 'none';
+      $('todayBtn').style.display = rig ? '' : 'none';
+      $('optSectionsWrap').style.display = m === 'cal' ? '' : 'none';
+      $('optSections').disabled = !hasSections();
       renderAll();
     }
-    $('mode-rig').addEventListener('click', function () { setMode('rig'); });
-    $('mode-cal').addEventListener('click', function () { setMode('cal'); });
-    $('mode-cyc').addEventListener('click', function () { setMode('cyc'); });
-    $('optDates').addEventListener('change', function () { S.showDates = this.checked; renderCarpet(); });
+    ['rig', 'cal', 'cyc'].forEach(function (k) { $('mode-' + k).addEventListener('click', function () { setMode(k); }); });
+    $('optDates').addEventListener('change', function () { S.showDates = this.checked; renderAll(); });
     $('optSections').addEventListener('change', function () { S.sections = this.checked; renderCarpet(); });
+    $('mw').addEventListener('input', function () { S.mw = +this.value; $('mwVal').textContent = S.mw + ' px'; if (S.mode === 'rig') renderRigChart(); });
+    $('mwVal').textContent = S.mw + ' px';
+    ['yFrom', 'yTo'].forEach(function (id) {
+      $(id).addEventListener('change', function () {
+        S[id] = +this.value;
+        if (S.yTo < S.yFrom) { if (id === 'yFrom') S.yTo = S.yFrom; else S.yFrom = S.yTo; $('yFrom').value = S.yFrom; $('yTo').value = S.yTo; }
+        var g = $('gdbu'); if (g) g.scrollLeft = 0;
+        renderRigChart();
+      });
+    });
+    $('todayBtn').addEventListener('click', function () {
+      var g = $('gdbu');
+      if (g && S.lastRig) g.scrollTo({ left: Math.max(0, S.lastRig.todayX - g.clientWidth / 2), behavior: 'smooth' });
+    });
     $('pngBtn').addEventListener('click', exportPNG);
 
     function renderAll() {
+      if (!S.files.length) return;
       if (S.mode === 'rig') { renderRigSummary(); renderRigChart(); }
       else { renderSummary(); renderCarpet(); }
     }
 
-    // точка входа для тестов и автоматизации
-    window.__drillCarpet = { load: loadArrayBuffer, loadDemo: loadDemo, state: S };
-
+    window.__drillCarpet = { state: S, loadDemo: loadDemo, readWorkbook: readWorkbook };
     loadDemo();
+    demoLoaded = true;
   })();
   </script>
 

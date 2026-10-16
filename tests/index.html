@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Тесты ядра ковра бурения</title>
+  <style>
+    body { font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; margin: 24px; color: #1a1a2e; }
+    .ok { color: #047857; } .fail { color: #b91c1c; font-weight: 600; } .skip { color: #6b7280; }
+    table { border-collapse: collapse; margin: 8px 0 20px; font-size: 12.5px; }
+    td, th { border: 1px solid #e5e7eb; padding: 2px 8px; text-align: left; }
+    th { background: #f4f5f7; } .bad { background: #fee2e2; }
+  </style>
+</head>
+<body>
+  <h1>Тесты ядра</h1>
+  <p>Синтетические проверки — всегда. Сверка с эталонным ГДБУ — если в <code>data/fixtures/</code> есть
+    <code>vpu.json</code>, <code>tpu.json</code> и <code>gdbu.json</code> (собираются <code>tools/</code>,
+    в git не попадают). Открывать через локальный сервер из корня проекта.</p>
+  <div id="out"></div>
+  <script src="../carpet-core.js"></script>
+  <script src="core.test.js"></script>
+</body>
+</html>
