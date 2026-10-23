@@ -1,6 +1,6 @@
 """Эталонный ГДБУ (Excel) → JSON для теста сверки: секции месторождений, бригады и их кусты по порядку.
 
-    python tools/gdbu_expected.py "ГДБУ.xlsx" data/fixtures/gdbu.json [--sheet "ГДБУ ВКМ"]
+    python tools/gdbu_expected.py "ГДБУ.xlsx" data/fixtures/gdbu.json [--sheet "Лист ГДБУ"]
 
 Формат листа: заголовок секции «ГДБУ <месторождение> ГБ …», строки бригад (тип БУ, месторождение, № бригады),
 дальше по месяцам ячейки «ВМР» и кампании «дд.мм.гггг / КП №N (скв) / дд.мм.гггг» — одной ячейкой
@@ -58,9 +58,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("src", type=Path)
     ap.add_argument("dst", type=Path)
-    ap.add_argument("--sheet", default="ГДБУ ВКМ")
+    ap.add_argument("--sheet", default=None, help="лист с ГДБУ; по умолчанию — активный")
     a = ap.parse_args()
-    ws = load_workbook(a.src, data_only=True)[a.sheet]
+    wb = load_workbook(a.src, data_only=True)
+    ws = wb[a.sheet] if a.sheet else wb.active
     sections, cur = [], None
     for r in range(1, ws.max_row + 1):
         title = str(ws.cell(r, 3).value or "")

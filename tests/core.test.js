@@ -62,7 +62,9 @@
   Promise.all([load('vpu.json'), load('tpu.json'), load('gdbu.json')]).then(function (res) {
     var files = [C.parseRows(res[0].rows, 'ВПУ'), C.parseRows(res[1].rows, 'ТПУ')];
     var sched = C.buildSchedule(files);
-    var map = { 'Ванкор': 'ВПУ', 'Тагул': 'ТПУ' };
+    var map = {};                  // первые два раздела эталонного ГДБУ — месторождения файлов ВПУ и ТПУ
+    map[res[2].sections[0].name] = 'ВПУ';
+    map[res[2].sections[1].name] = 'ТПУ';
     var FACT_END = '2024-01-01';   // ГДБУ собран по другой версии плана: строго сверяем только факт
     var total = 0, seqOk = 0, start = 0, end = 0, cnt = 0, fact = 0, factOk = 0, missingRigs = [], unmatched = [];
     res[2].sections.forEach(function (gs) {
